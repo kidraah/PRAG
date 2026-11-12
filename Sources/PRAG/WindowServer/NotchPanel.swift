@@ -25,7 +25,7 @@ final class NotchPanel: NSPanel {
         isMovableByWindowBackground = false
         hidesOnDeactivate = false
         isReleasedWhenClosed = false
-        becomesKeyOnlyIfNeeded = true
+        becomesKeyOnlyIfNeeded = false
         animationBehavior = .none
         acceptsMouseMovedEvents = true
         titleVisibility = .hidden
@@ -33,6 +33,15 @@ final class NotchPanel: NSPanel {
     }
 
     override var canBecomeKey: Bool { canBecomeKeyProvider?() ?? false }
+
+    override func sendEvent(_ event: NSEvent) {
+        // Become key on the mouse-down itself so this click and the next keystroke both land
+        // immediately. Non-activating: the app you were in stays frontmost.
+        if (event.type == .leftMouseDown || event.type == .rightMouseDown), !isKeyWindow, canBecomeKey {
+            makeKey()
+        }
+        super.sendEvent(event)
+    }
     override var canBecomeMain: Bool { false }
 
     override func keyDown(with event: NSEvent) {

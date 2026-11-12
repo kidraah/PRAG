@@ -2,10 +2,11 @@ import SwiftUI
 import PRAGCore
 
 /// Smart actions for the current selection (or the whole shelf when nothing is selected):
-/// one-click chained presets first, then single actions, then the chain builder.
+/// chained presets first, then single actions, with the chain builder pinned at the end.
+/// Format conversions fold into one "Convert" pill that expands in place.
 struct ActionBarView: View {
     let state: AppState
-    let wraps: Bool
+    @State private var convertOpen = false
 
     private var kinds: Set<ItemKind> { state.actionKinds }
     private var count: Int { state.actionTargets.count }
@@ -20,8 +21,10 @@ struct ActionBarView: View {
                     .transition(.move(edge: .leading).combined(with: .opacity))
             }
         }
-        .frame(height: wraps ? nil : 32)
-        .animation(.spring(response: 0.32, dampingFraction: 0.85), value: state.isBuildingChain)
+        .frame(height: 28)
+        .animation(.spring(response: 0.32, dampingFraction: 0.86), value: state.isBuildingChain)
+        .animation(.spring(response: 0.3, dampingFraction: 0.86), value: convertOpen)
+        .onChange(of: kinds) { convertOpen = false }
     }
 
     // MARK: Default bar
@@ -29,213 +32,216 @@ struct ActionBarView: View {
     private var actions: some View {
         let presets = ActionCatalog.presets(kinds: kinds, count: count)
         let singles = ActionCatalog.singleActions(kinds: kinds, count: count)
-        return container {
-            TargetChip(count: count, kinds: kinds, isAll: state.selection.isEmpty)
-            ForEach(presets) { preset in
-                PresetPill(pipeline: preset) { state.run(preset) }
-            }
-            if !presets.isEmpty { Divider().frame(height: 16).overlay(Theme.hairline) }
-            ForEach(singles, id: \.self) { step in
-                ActionPill(step: step) { state.run(.single(step)) }
-            }
-            if !singles.isEmpty {
-                ChainButton { state.chainDraft = []; state.isBuildingChain = true }
+        let converts = Self.convertSteps(in: singles)
+        let others = singles.filter { !converts.contains($0) }
+        return bar(trailing: singles.isEmpty ? nil : AnyView(
+            IconPill(symbol: "link.badge.plus", help: "Build a custom 2–3 step chain") {
+                state.chainDraft = []
+                state.isBuildingChain = true
+            })) {
+            if convertOpen {
+                IconPill(symbol: "chevron.left", help: "Back") { convertOpen = false }
+                ForEach(converts, id: \.self) { step in
+                    Pill(title: Self.shortTitle(step), symbol: nil) {
+                        convertOpen = false
+                        state.run(.single(step))
+                    }
+                    .transition(.scale(scale: 0.8, anchor: .leading).combined(with: .opacity))
+                }
+            } else {
+                ForEach(presets) { preset in
+                    Pill(title: preset.name, symbol: preset.symbol, prominence: .preset, help: preset.breadcrumb) {
+                        state.run(preset)
+                    }
+                }
+                if !presets.isEmpty && !singles.isEmpty { SeparatorDot() }
+                ForEach(others, id: \.self) { step in
+                    Pill(title: Self.shortTitle(step), symbol: nil, help: step.title) { state.run(.single(step)) }
+                    if step == others.first && !converts.isEmpty {
+                        Pill(title: "Convert", symbol: nil, disclosure: true, help: "Convert format") { convertOpen = true }
+                    }
+                }
             }
         }
     }
 
-    // MARK: Chain builder: pick up to three steps, see the breadcrumb, run.
+    // MARK: Chain builder
 
     private var chainBuilder: some View {
         let candidates = state.chainDraft.count < 3 ? state.chainCandidates() : []
         let pipeline = state.chainDraftPipeline
-        return container {
-            Image(systemName: "link")
-                .font(.system(size: 11, weight: .bold))
-                .foregroundStyle(Theme.accent)
-            if state.chainDraft.isEmpty {
-                Text("Pick up to 3 steps")
-                    .font(Theme.label(10.5)).foregroundStyle(Theme.secondary)
-                    .fixedSize()
+        let runnable = pipeline.isApplicable(kinds: kinds, count: count)
+        return bar(trailing: AnyView(HStack(spacing: 6) {
+            IconPill(symbol: "xmark", help: "Cancel") {
+                state.isBuildingChain = false
+                state.chainDraft = []
             }
-            ForEach(Array(state.chainDraft.enumerated()), id: \.offset) { idx, step in
-                if idx > 0 {
-                    Image(systemName: "chevron.right").font(.system(size: 8, weight: .bold)).foregroundStyle(Theme.tertiary)
-                }
-                ChainStepChip(step: step) {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                        state.chainDraft.removeSubrange(idx...)
-                    }
-                }
-            }
-            if !candidates.isEmpty {
-                Divider().frame(height: 16).overlay(Theme.hairline)
-                ForEach(candidates, id: \.self) { step in
-                    ActionPill(step: step, isAdd: true) {
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) { state.appendToChain(step) }
-                    }
-                }
-            }
-            Divider().frame(height: 16).overlay(Theme.hairline)
-            Button {
+            Pill(title: "Run", symbol: "play.fill", prominence: .primary) {
                 state.run(pipeline)
                 state.isBuildingChain = false
                 state.chainDraft = []
-            } label: {
-                Label("Run", systemImage: "play.fill")
-                    .font(Theme.label(11, .semibold))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 11).frame(height: 26)
-                    .background(Capsule().fill(Theme.presetGradient))
             }
-            .buttonStyle(PressableStyle())
-            .disabled(!pipeline.isApplicable(kinds: kinds, count: count))
-            .opacity(pipeline.isApplicable(kinds: kinds, count: count) ? 1 : 0.4)
-            BandButton(symbol: "xmark", help: "Cancel chain") {
-                state.isBuildingChain = false
-                state.chainDraft = []
+            .disabled(!runnable)
+            .opacity(runnable ? 1 : 0.35)
+        })) {
+            if state.chainDraft.isEmpty {
+                Text("Pick up to 3 steps")
+                    .font(Theme.label(11)).foregroundStyle(Theme.secondary)
+                    .fixedSize()
+                    .padding(.trailing, 2)
+            }
+            ForEach(Array(state.chainDraft.enumerated()), id: \.offset) { idx, step in
+                if idx > 0 {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 8, weight: .bold)).foregroundStyle(Theme.tertiary)
+                }
+                Pill(title: Self.shortTitle(step), symbol: nil, prominence: .selected, help: "Remove from chain") {
+                    state.chainDraft.removeSubrange(idx...)
+                }
+            }
+            if !candidates.isEmpty {
+                if !state.chainDraft.isEmpty { SeparatorDot() }
+                ForEach(candidates, id: \.self) { step in
+                    Pill(title: Self.shortTitle(step), symbol: "plus") { state.appendToChain(step) }
+                }
             }
         }
     }
 
-    @ViewBuilder
-    private func container<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
-        if wraps {
-            GridFlowLayout(spacing: 6) { content() }
-        } else {
+    // MARK: Layout
+
+    private func bar<Content: View>(trailing: AnyView?, @ViewBuilder _ content: () -> Content) -> some View {
+        HStack(spacing: 6) {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 6) { content() }
                     .padding(.horizontal, 1)
-                    .frame(height: 32)
+                    .frame(height: 28)
             }
+            // Soft edge instead of a hard cut if a long chain ever overflows.
+            .mask(HStack(spacing: 0) {
+                Color.black
+                LinearGradient(colors: [.black, .clear], startPoint: .leading, endPoint: .trailing).frame(width: 14)
+            })
+            if let trailing { trailing.fixedSize() }
+        }
+    }
+
+    // MARK: Helpers
+
+    private static func convertSteps(in steps: [ActionStep]) -> [ActionStep] {
+        var out = steps.filter { if case .convertImage = $0 { return true } else { return false } }
+        guard !out.isEmpty else { return [] }
+        for f in [ImageFormat.heic, .avif] where ImagePipelineService.canEncode(f) {
+            let step = ActionStep.convertImage(f)
+            if !out.contains(step) { out.append(step) }
+        }
+        return out
+    }
+
+    static func shortTitle(_ step: ActionStep) -> String {
+        switch step {
+        case .convertImage(let f): f.label
+        case .ocrToClipboard: "Copy Text"
+        case .compressImage: "Compress"
+        case .extractPDFText: "Text"
+        case .extractPDFImages: "Images"
+        case .compressPDF: "Compress"
+        case .mergePDFs: "Merge"
+        default: step.title
         }
     }
 }
 
-// MARK: - Pills
+// MARK: - Pills (macOS-style capsules: graphite fill, hairline rim, blue only for primary)
 
-private struct TargetChip: View {
-    let count: Int
-    let kinds: Set<ItemKind>
-    let isAll: Bool
+private struct Pill: View {
+    enum Prominence { case normal, preset, primary, selected }
 
-    var body: some View {
-        let noun: String = {
-            guard kinds.count == 1, let k = kinds.first else { return count == 1 ? "item" : "items" }
-            switch k {
-            case .image: return count == 1 ? "image" : "images"
-            case .pdf: return count == 1 ? "PDF" : "PDFs"
-            case .video: return count == 1 ? "video" : "videos"
-            case .folder: return count == 1 ? "folder" : "folders"
-            default: return count == 1 ? "file" : "files"
-            }
-        }()
-        Text(isAll ? "All \(count) \(noun)" : "\(count) \(noun)")
-            .font(Theme.label(10, .semibold))
-            .foregroundStyle(Theme.secondary)
-            .fixedSize()
-            .padding(.trailing, 2)
-            .contentTransition(.numericText())
-    }
-}
-
-private struct PresetPill: View {
-    let pipeline: ActionPipeline
+    let title: String
+    let symbol: String?
+    var prominence: Prominence = .normal
+    var disclosure = false
+    var help: String = ""
     let action: () -> Void
     @State private var hover = false
 
     var body: some View {
         Button(action: action) {
             HStack(spacing: 5) {
-                Image(systemName: pipeline.symbol).font(.system(size: 10.5, weight: .bold))
-                Text(pipeline.name).font(Theme.label(11, .semibold))
-                if hover {
-                    Text(pipeline.steps.map(\.title).joined(separator: " › "))
-                        .font(Theme.label(9.5))
-                        .opacity(0.8)
-                        .transition(.opacity.combined(with: .move(edge: .leading)))
+                if let symbol {
+                    Image(systemName: symbol)
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(iconColor)
+                }
+                Text(title)
+                    .font(Theme.label(11, prominence == .normal ? .medium : .semibold))
+                if disclosure {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 7.5, weight: .bold))
+                        .foregroundStyle(Theme.tertiary)
                 }
             }
-            .foregroundStyle(.white)
-            .padding(.horizontal, 11)
+            .foregroundStyle(prominence == .primary ? .white : Theme.text)
+            .padding(.horizontal, symbol == nil ? 11 : 10)
             .frame(height: 26)
-            .background(Capsule().fill(Theme.presetGradient))
-            .overlay(Capsule().strokeBorder(.white.opacity(hover ? 0.4 : 0.18), lineWidth: 1))
-            .shadow(color: Theme.accent.opacity(hover ? 0.5 : 0.2), radius: hover ? 8 : 4)
-            .fixedSize()
-        }
-        .buttonStyle(PressableStyle())
-        .onHover { h in withAnimation(.spring(response: 0.28, dampingFraction: 0.8)) { hover = h } }
-        .help(pipeline.breadcrumb)
-    }
-}
-
-private struct ActionPill: View {
-    let step: ActionStep
-    var isAdd = false
-    let action: () -> Void
-    @State private var hover = false
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 5) {
-                Image(systemName: isAdd ? "plus" : step.symbol).font(.system(size: 10, weight: .semibold))
-                Text(step.title).font(Theme.label(11, .medium))
-            }
-            .foregroundStyle(hover ? Theme.text : Theme.text.opacity(0.85))
-            .padding(.horizontal, 10)
-            .frame(height: 26)
-            .background(Capsule().fill(hover ? Theme.fillHover : Theme.fill))
-            .overlay(Capsule().strokeBorder(Theme.hairline, lineWidth: 1))
+            .background(Capsule().fill(fill))
+            .overlay(Capsule().strokeBorder(rimColor, lineWidth: 0.75))
+            .contentShape(Capsule())
             .fixedSize()
         }
         .buttonStyle(PressableStyle())
         .onHover { hover = $0 }
         .animation(.easeOut(duration: 0.12), value: hover)
+        .help(help)
     }
-}
 
-private struct ChainStepChip: View {
-    let step: ActionStep
-    let remove: () -> Void
-    @State private var hover = false
-
-    var body: some View {
-        Button(action: remove) {
-            HStack(spacing: 4) {
-                Image(systemName: hover ? "xmark" : step.symbol).font(.system(size: 9.5, weight: .bold))
-                Text(step.title).font(Theme.label(10.5, .semibold))
-            }
-            .foregroundStyle(Theme.accent)
-            .padding(.horizontal, 9).frame(height: 24)
-            .background(Capsule().fill(Theme.accent.opacity(0.16)))
-            .overlay(Capsule().strokeBorder(Theme.accent.opacity(0.5), lineWidth: 1))
-            .fixedSize()
+    private var iconColor: Color {
+        switch prominence {
+        case .preset: Theme.accent
+        case .primary: .white
+        case .selected: Theme.accent
+        case .normal: Theme.secondary
         }
-        .buttonStyle(PressableStyle())
-        .onHover { hover = $0 }
-        .transition(.scale.combined(with: .opacity))
+    }
+
+    private var fill: Color {
+        switch prominence {
+        case .primary: hover ? Theme.accent.opacity(0.85) : Theme.accent
+        case .preset: hover ? Theme.fillPressed : Theme.fillHover
+        case .selected: Theme.accent.opacity(hover ? 0.28 : 0.2)
+        case .normal: hover ? Theme.fillHover : Theme.fill
+        }
+    }
+
+    private var rimColor: Color {
+        prominence == .selected ? Theme.accent.opacity(0.55) : Theme.hairline
     }
 }
 
-private struct ChainButton: View {
+private struct IconPill: View {
+    let symbol: String
+    var help: String = ""
     let action: () -> Void
     @State private var hover = false
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 4) {
-                Image(systemName: "link.badge.plus").font(.system(size: 10.5, weight: .semibold))
-                Text("Chain").font(Theme.label(11, .semibold))
-            }
-            .foregroundStyle(Theme.accent)
-            .padding(.horizontal, 10).frame(height: 26)
-            .background(Capsule().strokeBorder(Theme.accent.opacity(hover ? 0.8 : 0.45),
-                                               style: StrokeStyle(lineWidth: 1, dash: [3, 2])))
-            .fixedSize()
+            Image(systemName: symbol)
+                .font(.system(size: 10.5, weight: .semibold))
+                .foregroundStyle(hover ? Theme.text : Theme.secondary)
+                .frame(width: 26, height: 26)
+                .background(Circle().fill(hover ? Theme.fillHover : Theme.fill))
+                .overlay(Circle().strokeBorder(Theme.hairline, lineWidth: 0.75))
+                .contentShape(Circle())
         }
         .buttonStyle(PressableStyle())
         .onHover { hover = $0 }
-        .help("Build a custom 2–3 step pipeline")
+        .help(help)
+    }
+}
+
+private struct SeparatorDot: View {
+    var body: some View {
+        Circle().fill(Theme.tertiary).frame(width: 3, height: 3).padding(.horizontal, 2)
     }
 }

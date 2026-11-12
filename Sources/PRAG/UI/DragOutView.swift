@@ -6,18 +6,22 @@ import PRAGCore
 /// Finder-style click selection, double-click to open, a native context menu, and
 /// a multi-item NSDraggingSession (drag one selected tile → all selected files go).
 struct DragOutView: NSViewRepresentable {
+    /// Where the tile's own SwiftUI controls sit; clicks there must reach them, not the drag layer.
+    enum ControlLayout { case tileCorners, rowEnds }
+
     let state: AppState
     let item: StashedItem
+    var controls: ControlLayout = .tileCorners
     var onHover: (Bool) -> Void
 
     func makeNSView(context: Context) -> DragOutNSView {
         let v = DragOutNSView()
-        v.configure(state: state, item: item, onHover: onHover)
+        v.configure(state: state, item: item, controls: controls, onHover: onHover)
         return v
     }
 
     func updateNSView(_ v: DragOutNSView, context: Context) {
-        v.configure(state: state, item: item, onHover: onHover)
+        v.configure(state: state, item: item, controls: controls, onHover: onHover)
     }
 }
 
@@ -29,10 +33,38 @@ final class DragOutNSView: NSView, NSDraggingSource {
     private var dragStarted = false
     private var draggedIDs: [UUID] = []
 
-    func configure(state: AppState, item: StashedItem, onHover: @escaping (Bool) -> Void) {
+    private var controls: DragOutView.ControlLayout = .tileCorners
+
+    func configure(state: AppState, item: StashedItem, controls: DragOutView.ControlLayout,
+                   onHover: @escaping (Bool) -> Void) {
         self.state = state
         self.item = item
+        self.controls = controls
         self.onHover = onHover
+    }
+
+    /// Hit zones (in this view's coordinates) handed to the SwiftUI close / check buttons —
+    /// only while those controls are on screen, so edge clicks still select/drag otherwise.
+    /// Close shows on hover; the check shows on hover or whenever anything is selected.
+    private var controlZones: [CGRect] {
+        let b = bounds, z: CGFloat = 28
+        let checkVisible = isHovering || !(state?.selection.isEmpty ?? true)
+        var zones: [CGRect] = []
+        switch controls {
+        case .tileCorners:
+            if isHovering { zones.append(CGRect(x: b.minX, y: b.maxY - z, width: z, height: z)) }
+            if checkVisible { zones.append(CGRect(x: b.maxX - z, y: b.maxY - z, width: z, height: z)) }
+        case .rowEnds:
+            if checkVisible { zones.append(CGRect(x: b.minX, y: b.minY, width: 30, height: b.height)) }
+            if isHovering { zones.append(CGRect(x: b.maxX - 30, y: b.minY, width: 30, height: b.height)) }
+        }
+        return zones
+    }
+
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        let local = convert(point, from: superview)
+        if controlZones.contains(where: { $0.contains(local) }) { return nil }
+        return super.hitTest(point)
     }
 
     override func updateTrackingAreas() {
@@ -42,8 +74,10 @@ final class DragOutNSView: NSView, NSDraggingSource {
                                        owner: self, userInfo: nil))
     }
 
-    override func mouseEntered(with event: NSEvent) { onHover?(true) }
-    override func mouseExited(with event: NSEvent) { onHover?(false) }
+    private var isHovering = false
+
+    override func mouseEntered(with event: NSEvent) { isHovering = true; onHover?(true) }
+    override func mouseExited(with event: NSEvent) { isHovering = false; onHover?(false) }
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
     // MARK: Click selection
@@ -99,12 +133,17 @@ final class DragOutNSView: NSView, NSDraggingSource {
     }
 
     func draggingSession(_ session: NSDraggingSession, sourceOperationMaskFor context: NSDraggingContext) -> NSDragOperation {
-        context == .outsideApplication ? [.copy, .link, .generic] : []
+        // Inside PRAG a tile can be moved onto a tab; outside it's a copy.
+        context == .outsideApplication ? [.copy, .link, .generic] : [.move]
     }
 
     func draggingSession(_ session: NSDraggingSession, endedAt screenPoint: NSPoint, operation: NSDragOperation) {
         dragStarted = false
         guard let state, operation != [] else { return }
+        if state.internalMoveHappened {      // moved onto one of our tabs, not dragged out
+            state.internalMoveHappened = false
+            return
+        }
         if state.settings.removeAfterDragOut {
             state.remove(Set(draggedIDs))
         }
@@ -148,6 +187,23 @@ final class DragOutNSView: NSView, NSDraggingSource {
             })
         }
         menu.addItem(.separator())
+        let ids = state.selection
+        let moveItem = NSMenuItem(title: "Move to", action: nil, keyEquivalent: "")
+        moveItem.image = NSImage(systemSymbolName: "folder", accessibilityDescription: nil)
+        let moveMenu = NSMenu()
+        if item.groupID != nil {
+            moveMenu.addItem(MenuAction("Recent", "clock") { state.move(ids, to: nil) })
+        }
+        for group in state.groups where group.id != item.groupID {
+            moveMenu.addItem(MenuAction(group.name, "folder") { state.move(ids, to: group.id) })
+        }
+        if moveMenu.items.count > 0 { moveMenu.addItem(.separator()) }
+        moveMenu.addItem(MenuAction("New Tab…", "folder.badge.plus") {
+            let g = state.createGroup(moving: ids)
+            state.activeTab = .group(g.id)
+        })
+        moveItem.submenu = moveMenu
+        menu.addItem(moveItem)
         menu.addItem(MenuAction("Remove from Shelf", "minus.circle") { state.removeSelected() })
         return menu
     }

@@ -22,12 +22,12 @@ public final class ScreenshotWatcherService: @unchecked Sendable {
     public init(onScreenshot: @escaping @Sendable (URL) -> Void) {
         self.onScreenshot = onScreenshot
         self.fixedDirectory = nil
-        self.stabilityInterval = 0.3
+        self.stabilityInterval = 0.06
         self.stabilityTimeout = 30
     }
 
     /// Internal init with an injectable directory (tests).
-    init(directory: URL?, stabilityInterval: TimeInterval = 0.3, stabilityTimeout: TimeInterval = 30,
+    init(directory: URL?, stabilityInterval: TimeInterval = 0.06, stabilityTimeout: TimeInterval = 30,
          onScreenshot: @escaping @Sendable (URL) -> Void) {
         self.onScreenshot = onScreenshot
         self.fixedDirectory = directory
@@ -106,6 +106,12 @@ public final class ScreenshotWatcherService: @unchecked Sendable {
         for name in fresh {
             let url = directory.appendingPathComponent(name)
             guard Self.looksLikeScreenshot(url) else { continue }
+            // screencaptureui writes to a hidden temp file and renames it into place, so a
+            // stamped, non-empty file is already complete: report it with zero delay.
+            if Self.hasScreenCaptureAttribute(url), let size = Self.size(of: url), size > 0 {
+                onScreenshot(url)
+                continue
+            }
             waitUntilStable(url, generation: generation, lastSize: -1, startedAt: Date())
         }
     }
@@ -152,7 +158,7 @@ public final class ScreenshotWatcherService: @unchecked Sendable {
     }
 
     /// `screencaptureui` stamps kMDItemIsScreenCapture as an extended attribute immediately — no Spotlight wait.
-    private static func hasScreenCaptureAttribute(_ url: URL) -> Bool {
+    static func hasScreenCaptureAttribute(_ url: URL) -> Bool {
         let attr = "com.apple.metadata:kMDItemIsScreenCapture"
         let length = getxattr(url.path, attr, nil, 0, 0, 0)
         guard length > 0 else { return false }

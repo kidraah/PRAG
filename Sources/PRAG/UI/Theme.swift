@@ -1,36 +1,50 @@
 import SwiftUI
 import AppKit
 
-/// Design tokens for the "organic hardware extension" look: pitch black at the bezel,
-/// fading into ultra-dark glass, with a hairline rim and a single cool "mercury" accent.
+/// Design tokens: Apple's system palette in light and dark variants. Graphite surfaces,
+/// a single system-blue accent for primary actions and selection, system green for savings.
+/// Every token is dynamic and resolves against the panel's appearance (Auto / Light / Dark).
 enum Theme {
-    static let base = Color.black
-    static let rim = Color.white.opacity(0.12)
-    static let text = Color.white.opacity(0.94)
-    static let secondary = Color.white.opacity(0.55)
-    static let tertiary = Color.white.opacity(0.32)
-    static let hairline = Color.white.opacity(0.08)
-    static let fill = Color.white.opacity(0.07)
-    static let fillHover = Color.white.opacity(0.12)
+    static let rim = Color.dynamic(light: .black.opacity(0.10), dark: .white.opacity(0.10))
+    static let text = Color.dynamic(light: .black.opacity(0.86), dark: .white.opacity(0.92))
+    static let secondary = Color.dynamic(light: .black.opacity(0.54), dark: .white.opacity(0.55))
+    static let tertiary = Color.dynamic(light: .black.opacity(0.36), dark: .white.opacity(0.32))
+    static let hairline = Color.dynamic(light: .black.opacity(0.09), dark: .white.opacity(0.08))
+    static let fill = Color.dynamic(light: .black.opacity(0.05), dark: .white.opacity(0.07))
+    static let fillHover = Color.dynamic(light: .black.opacity(0.09), dark: .white.opacity(0.12))
+    static let fillPressed = Color.dynamic(light: .black.opacity(0.13), dark: .white.opacity(0.17))
+    /// Solid chip background that reads on top of thumbnails (badges, check rings).
+    static let chip = Color.dynamic(light: .white.opacity(0.94), dark: .black.opacity(0.86))
 
-    /// Mercury blue — selection, glow, primary actions.
-    static let accent = Color(red: 0.42, green: 0.66, blue: 1.0)
-    static let accentDeep = Color(red: 0.25, green: 0.42, blue: 0.98)
-    /// Savings green for the delta badge; amber when the output grew.
-    static let saving = Color(red: 0.30, green: 0.86, blue: 0.52)
-    static let growth = Color(red: 1.0, green: 0.70, blue: 0.30)
-    static let danger = Color(red: 1.0, green: 0.42, blue: 0.40)
-
-    static let presetGradient = LinearGradient(
-        colors: [Color(red: 0.36, green: 0.58, blue: 1.0), Color(red: 0.58, green: 0.42, blue: 1.0)],
-        startPoint: .leading, endPoint: .trailing)
+    /// systemBlue.
+    static let accent = Color.dynamic(light: Color(red: 0, green: 122 / 255, blue: 1),
+                                      dark: Color(red: 10 / 255, green: 132 / 255, blue: 1))
+    /// systemGreen (darkened in light mode so it reads as text on white).
+    static let saving = Color.dynamic(light: Color(red: 0.11, green: 0.56, blue: 0.24),
+                                      dark: Color(red: 48 / 255, green: 209 / 255, blue: 88 / 255))
+    /// systemOrange — output grew.
+    static let growth = Color.dynamic(light: Color(red: 0.80, green: 0.42, blue: 0.0),
+                                      dark: Color(red: 1, green: 159 / 255, blue: 10 / 255))
+    /// systemRed — destructive.
+    static let danger = Color.dynamic(light: Color(red: 1, green: 59 / 255, blue: 48 / 255),
+                                      dark: Color(red: 1, green: 69 / 255, blue: 58 / 255))
 
     static func label(_ size: CGFloat = 11, _ weight: Font.Weight = .medium) -> Font {
         .system(size: size, weight: weight, design: .default)
     }
 
     static func numeric(_ size: CGFloat = 10, _ weight: Font.Weight = .medium) -> Font {
-        .system(size: size, weight: weight, design: .rounded).monospacedDigit()
+        .system(size: size, weight: weight, design: .default).monospacedDigit()
+    }
+}
+
+extension Color {
+    /// A colour that follows the effective appearance of whatever draws it.
+    static func dynamic(light: Color, dark: Color) -> Color {
+        let l = NSColor(light), d = NSColor(dark)
+        return Color(nsColor: NSColor(name: nil) { appearance in
+            appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? d : l
+        })
     }
 }
 
@@ -45,7 +59,6 @@ struct VisualEffectBlur: NSViewRepresentable {
         v.blendingMode = blending
         v.state = .active
         v.isEmphasized = true
-        v.appearance = NSAppearance(named: .darkAqua)
         return v
     }
 

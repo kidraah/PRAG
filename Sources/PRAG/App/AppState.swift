@@ -26,6 +26,31 @@ struct PipelineJob: Identifiable, Equatable {
     var progress: Double = 0
 }
 
+/// A user-made tab that items can be parked in.
+struct ShelfGroup: Identifiable, Codable, Equatable {
+    let id: UUID
+    var name: String
+    var createdAt: Date
+
+    init(id: UUID = UUID(), name: String, createdAt: Date = Date()) {
+        self.id = id
+        self.name = name
+        self.createdAt = createdAt
+    }
+}
+
+/// Tabs across the top of the shelf.
+enum ShelfTab: Hashable {
+    case recent                 // everything not parked in a group (new drops land here)
+    case screenshots            // auto-caught screenshots not parked in a group
+    case group(UUID)
+
+    var groupID: UUID? {
+        if case .group(let id) = self { return id }
+        return nil
+    }
+}
+
 struct Toast: Identifiable, Equatable {
     let id = UUID()
     var symbol: String
@@ -63,6 +88,22 @@ final class AppState {
 
     var toast: Toast?
 
+    // Tabs / groups
+    private(set) var groups: [ShelfGroup] = []
+    var activeTab: ShelfTab = .recent {
+        didSet { if oldValue != activeTab { selection = []; isBuildingChain = false; chainDraft = [] } }
+    }
+    /// Tab under an in-flight drag (highlighted; a drop there parks items in it).
+    var dropTargetTab: ShelfTab?
+    /// Tab frames in the shelf's coordinate space (top-left origin), for AppKit drop hit-testing.
+    @ObservationIgnored var tabFrames: [ShelfTab: CGRect] = [:]
+    /// Set while an item drag from the shelf lands on one of its own tabs.
+    @ObservationIgnored var internalMoveHappened = false
+    /// Makes the open shelf's panel key (for text entry). Set by AppDelegate.
+    @ObservationIgnored var keyFocusRequest: (() -> Void)?
+
+    func requestKeyFocus() { keyFocusRequest?() }
+
     let settings = Settings()
 
     @ObservationIgnored weak var quickLook: QuickLookCoordinator?
@@ -83,14 +124,36 @@ final class AppState {
         if let raw = UserDefaults.standard.string(forKey: "viewMode"), let m = ShelfViewMode(rawValue: raw) {
             viewMode = m
         }
+        if let data = UserDefaults.standard.data(forKey: "groups"),
+           let saved = try? JSONDecoder().decode([ShelfGroup].self, from: data) {
+            groups = saved
+        }
     }
 
     // MARK: - Derived
 
     var isOpen: Bool { mode != .collapsed }
     var selectedItems: [StashedItem] { items.filter { selection.contains($0.id) } }
-    /// Actions apply to the selection, or to the whole shelf when nothing is selected.
-    var actionTargets: [StashedItem] { selection.isEmpty ? items : selectedItems }
+    /// Items shown in the active tab.
+    var visibleItems: [StashedItem] { items(in: activeTab) }
+    /// Actions apply to the selection, or to the whole tab when nothing is selected.
+    var actionTargets: [StashedItem] { selection.isEmpty ? visibleItems : selectedItems }
+
+    func items(in tab: ShelfTab) -> [StashedItem] {
+        switch tab {
+        case .recent: items.filter { $0.groupID == nil }
+        case .screenshots: items.filter { $0.groupID == nil && $0.origin == .screenshot }
+        case .group(let id): items.filter { $0.groupID == id }
+        }
+    }
+
+    /// Screenshots tab shows while Auto-Catch is on or any caught screenshot is unparked.
+    var showsScreenshotsTab: Bool {
+        settings.autoCatchScreenshots || items.contains { $0.groupID == nil && $0.origin == .screenshot }
+    }
+
+    /// Where new drops go: the open group, otherwise Recent.
+    private var dropGroupID: UUID? { activeTab.groupID }
     var actionKinds: Set<ItemKind> { Set(actionTargets.map(\.kind)) }
 
     func mode(for screen: CGDirectDisplayID) -> ShelfMode {
@@ -172,13 +235,22 @@ final class AppState {
     }
 
     @discardableResult
-    func add(urls: [URL], origin: ItemOrigin = .dropped) -> [StashedItem] {
+    func add(urls: [URL], origin: ItemOrigin = .dropped, group: UUID? = nil) -> [StashedItem] {
         var added: [StashedItem] = []
         for url in urls {
             let std = url.standardizedFileURL
             guard FileManager.default.fileExists(atPath: std.path) else { continue }
-            if items.contains(where: { $0.url.standardizedFileURL == std }) { continue }
-            let item = StashedItem(url: std, bookmark: storage.makeBookmark(for: std), origin: origin)
+            let target = origin == .screenshot ? nil : (group ?? dropGroupID)
+            if let existing = items.firstIndex(where: { $0.url.standardizedFileURL == std }) {
+                // Already parked elsewhere: bring it to the tab it was dropped on.
+                if origin != .screenshot && items[existing].groupID != target {
+                    items[existing].groupID = target
+                    scheduleSave()
+                }
+                continue
+            }
+            let item = StashedItem(url: std, bookmark: storage.makeBookmark(for: std), origin: origin,
+                                   groupID: target)
             added.append(item)
         }
         insert(added)
@@ -219,18 +291,70 @@ final class AppState {
     }
 
     func removeSelected() { remove(selection) }
-    func clearAll() { remove(Set(items.map(\.id))) }
+    /// Clears the active tab (other tabs are left alone).
+    func clearAll() { remove(Set(visibleItems.map(\.id))) }
+    func clearEverything() { remove(Set(items.map(\.id))) }
 
-    func selectAll() { selection = Set(items.map(\.id)) }
+    func selectAll() { selection = Set(visibleItems.map(\.id)) }
+
+    // MARK: - Groups
+
+    @discardableResult
+    func createGroup(named name: String? = nil, moving ids: Set<UUID> = []) -> ShelfGroup {
+        let base = (name?.trimmingCharacters(in: .whitespacesAndNewlines)).flatMap { $0.isEmpty ? nil : $0 }
+        let group = ShelfGroup(name: base ?? nextGroupName())
+        groups.append(group)
+        saveGroups()
+        if !ids.isEmpty { move(ids, to: group.id) }
+        return group
+    }
+
+    func renameGroup(_ id: UUID, to name: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, let i = groups.firstIndex(where: { $0.id == id }) else { return }
+        groups[i].name = trimmed
+        saveGroups()
+    }
+
+    /// Deletes the tab; its items go back to Recent (nothing is removed).
+    func deleteGroup(_ id: UUID) {
+        for i in items.indices where items[i].groupID == id { items[i].groupID = nil }
+        groups.removeAll { $0.id == id }
+        if activeTab == .group(id) { activeTab = .recent }
+        saveGroups()
+        scheduleSave()
+    }
+
+    func move(_ ids: Set<UUID>, to group: UUID?) {
+        guard !ids.isEmpty else { return }
+        for i in items.indices where ids.contains(items[i].id) { items[i].groupID = group }
+        selection.subtract(ids)
+        scheduleSave()
+        let name = group.flatMap { g in groups.first { $0.id == g }?.name } ?? "Recent"
+        showToast("Moved \(ids.count) to \(name)", symbol: "folder")
+    }
+
+    func groupName(_ id: UUID) -> String { groups.first { $0.id == id }?.name ?? "Group" }
+
+    private func nextGroupName() -> String {
+        var n = groups.count + 1
+        while groups.contains(where: { $0.name == "Group \(n)" }) { n += 1 }
+        return "Group \(n)"
+    }
+
+    private func saveGroups() {
+        if let data = try? JSONEncoder().encode(groups) { UserDefaults.standard.set(data, forKey: "groups") }
+    }
 
     /// Finder-like click selection.
     func click(_ id: UUID, command: Bool, shift: Bool) {
         if command {
             if selection.contains(id) { selection.remove(id) } else { selection.insert(id) }
-        } else if shift, let anchor = items.firstIndex(where: { selection.contains($0.id) }),
-                  let target = items.firstIndex(where: { $0.id == id }) {
+        } else if shift, case let visible = visibleItems,
+                  let anchor = visible.firstIndex(where: { selection.contains($0.id) }),
+                  let target = visible.firstIndex(where: { $0.id == id }) {
             let range = anchor <= target ? anchor...target : target...anchor
-            selection = Set(items[range].map(\.id))
+            selection = Set(visible[range].map(\.id))
         } else {
             selection = [id]
         }
@@ -303,13 +427,14 @@ final class AppState {
 
     private func materialize(name: String, ext: String, write: @escaping @Sendable (URL) throws -> Void) {
         let storage = self.storage
+        let group = dropGroupID
         Task {
             do {
                 let dir = try await storage.makeStepDirectory()
                 let safe = name.replacingOccurrences(of: "/", with: "-").replacingOccurrences(of: ":", with: "-")
                 let dest = dir.appendingPathComponent(safe).appendingPathExtension(ext)
                 try write(dest)
-                let item = StashedItem(url: dest, origin: .clipboard)
+                let item = StashedItem(url: dest, origin: .clipboard, groupID: group)
                 self.insert([item])
             } catch {
                 self.showToast("Couldn't stash that: \(error.localizedDescription)", symbol: "exclamationmark.triangle", isError: true)
@@ -319,13 +444,14 @@ final class AppState {
 
     private func receivePromises(_ receivers: [NSFilePromiseReceiver]) {
         let storage = self.storage
+        let group = dropGroupID
         Task {
             guard let dir = try? await storage.makeStepDirectory() else { return }
             for receiver in receivers {
                 receiver.receivePromisedFiles(atDestination: dir, options: [:], operationQueue: .main) { url, error in
                     guard error == nil else { return }
                     MainActor.assumeIsolated {
-                        let item = StashedItem(url: url, origin: .clipboard)
+                        let item = StashedItem(url: url, origin: .clipboard, groupID: group)
                         self.insert([item])
                     }
                 }
@@ -347,6 +473,7 @@ final class AppState {
         jobs.append(job)
         let jobID = job.id
         let anchor = inputs.last?.id
+        let sourceGroup = inputs.first?.groupID
         let chainer = self.chainer
 
         let task = Task { [weak self] in
@@ -357,9 +484,12 @@ final class AppState {
                 guard let self else { return }
                 self.finishJob(jobID)
                 switch output {
-                case .items(let produced):
+                case .items(var produced):
+                    for i in produced.indices { produced[i].groupID = sourceGroup }
                     self.insert(produced, after: anchor)
-                    self.selection = Set(produced.map(\.id))
+                    // Select the outputs only if they're in the tab being looked at.
+                    let visible = Set(self.visibleItems.map(\.id))
+                    self.selection = Set(produced.map(\.id)).intersection(visible)
                     self.announce(produced, pipeline: pipeline)
                 case .text(let text):
                     NSPasteboard.general.clearContents()

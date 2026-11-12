@@ -6,15 +6,22 @@ import ServiceManagement
 @MainActor
 @Observable
 final class Settings {
-    enum ExternalDisplayStyle: String, CaseIterable, Identifiable {
-        case topPill, leftEdge, rightEdge, off
+    enum Appearance: String, CaseIterable, Identifiable {
+        case auto, light, dark
         var id: String { rawValue }
         var label: String {
             switch self {
-            case .topPill: "Top Pill"
-            case .leftEdge: "Left Edge"
-            case .rightEdge: "Right Edge"
-            case .off: "Off"
+            case .auto: "Auto"
+            case .light: "Light"
+            case .dark: "Dark"
+            }
+        }
+        /// nil follows the system appearance.
+        var nsAppearance: NSAppearance? {
+            switch self {
+            case .auto: nil
+            case .light: NSAppearance(named: .aqua)
+            case .dark: NSAppearance(named: .darkAqua)
             }
         }
     }
@@ -30,8 +37,8 @@ final class Settings {
     var removeAfterDragOut: Bool { didSet { defaults.set(removeAfterDragOut, forKey: "removeAfterDragOut") } }
     var haptics: Bool { didSet { defaults.set(haptics, forKey: "haptics") } }
     var showIndicator: Bool { didSet { defaults.set(showIndicator, forKey: "showIndicator") } }
-    var externalStyle: ExternalDisplayStyle {
-        didSet { defaults.set(externalStyle.rawValue, forKey: "externalStyle") }
+    var appearance: Appearance {
+        didSet { defaults.set(appearance.rawValue, forKey: "appearance") }
     }
 
     var launchAtLogin: Bool {
@@ -61,7 +68,7 @@ final class Settings {
             "removeAfterDragOut": false,
             "haptics": true,
             "showIndicator": true,
-            "externalStyle": ExternalDisplayStyle.topPill.rawValue,
+            "appearance": Appearance.auto.rawValue,
         ])
         dragProximity = defaults.bool(forKey: "dragProximity")
         shiftTap = defaults.bool(forKey: "shiftTap")
@@ -72,6 +79,7 @@ final class Settings {
         removeAfterDragOut = defaults.bool(forKey: "removeAfterDragOut")
         haptics = defaults.bool(forKey: "haptics")
         showIndicator = defaults.bool(forKey: "showIndicator")
-        externalStyle = ExternalDisplayStyle(rawValue: defaults.string(forKey: "externalStyle") ?? "") ?? .topPill
+        appearance = Appearance(rawValue: defaults.string(forKey: "appearance") ?? "") ?? .auto
+        defaults.removeObject(forKey: "externalStyle")   // retired option
     }
 }

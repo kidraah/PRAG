@@ -16,7 +16,7 @@ final class ScreenShelfModel {
 
 extension Animation {
     static let shelfExpand = Animation.spring(response: 0.42, dampingFraction: 0.78, blendDuration: 0.1)
-    static let shelfCollapse = Animation.spring(response: 0.34, dampingFraction: 0.92)
+    static let shelfCollapse = Animation.spring(response: 0.36, dampingFraction: 1.0)   // critically damped: no bounce on close
     static let shelfPeek = Animation.spring(response: 0.3, dampingFraction: 0.62)
 }
 
@@ -42,7 +42,7 @@ final class NotchWindowController {
         hostView = NotchHostView(frame: CGRect(origin: .zero, size: frame.size))
 
         let root = NotchContainerView(state: state, model: model)
-        let hosting = NSHostingView(rootView: root)
+        let hosting = ShelfHostingView(rootView: root)
         hosting.sizingOptions = []
         hostView.install(hosting)
         panel.contentView = hostView
@@ -76,8 +76,8 @@ final class NotchWindowController {
 
     /// True when the point is over the visible shelf body (used for hover/collapse decisions).
     func containsVisibleShelf(_ p: CGPoint) -> Bool {
-        let size = geometry.screenShapeSize(for: model.mode, hasIndicator: model.hasIndicator,
-                                            settings: state.page == .settings)
+        let size = geometry.shapeSize(for: model.mode, hasIndicator: model.hasIndicator,
+                                      settings: state.page == .settings)
         return geometry.panelFrame(shapeSize: size, padded: false).insetBy(dx: -4, dy: -4).contains(p)
     }
 
@@ -147,7 +147,7 @@ final class NotchWindowController {
             self.panel.setFrame(self.model.geometry.collapsedFrame(hasIndicator: self.model.hasIndicator), display: true)
         }
         if animated {
-            withAnimation(.shelfCollapse, completionCriteria: .logicallyComplete) {
+            withAnimation(.shelfCollapse, completionCriteria: .removed) {
                 model.mode = .collapsed
                 model.hasIndicator = indicator
             } completion: {
@@ -170,6 +170,8 @@ final class NotchWindowController {
     // MARK: Keyboard
 
     private func handleKey(_ event: NSEvent) -> Bool {
+        // A focused text field (e.g. renaming a tab) owns every key.
+        if panel.firstResponder is NSText { return false }
         let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
         let chars = event.charactersIgnoringModifiers?.lowercased() ?? ""
         switch (event.keyCode, flags.contains(.command)) {
@@ -208,6 +210,12 @@ final class NotchWindowController {
             return false
         }
     }
+}
+
+/// SwiftUI host that acts on the very first click, even while the panel isn't key —
+/// otherwise AppKit spends that click just focusing the window and controls feel laggy.
+final class ShelfHostingView<Content: View>: NSHostingView<Content> {
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 }
 
 /// Container view: drop destination for the whole shelf + hover tracking.
@@ -275,34 +283,74 @@ final class NotchHostView: NSView {
 
     // MARK: Drop destination
 
-    override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
+    private func isOwnDrag(_ sender: NSDraggingInfo) -> Bool {
+        (sender.draggingSource as? NSView)?.window === window
+    }
+
+    /// The shelf tab under a drag location, using frames SwiftUI reported (top-left origin).
+    private func tab(at location: NSPoint) -> ShelfTab? {
+        guard let state, state.mode(for: displayID) == .expanded, state.page == .shelf else { return nil }
+        let p = convert(location, from: nil)
+        let flipped = CGPoint(x: p.x, y: bounds.height - p.y)
+        return state.tabFrames.first { $0.value.insetBy(dx: -2, dy: -3).contains(flipped) }?.key
+    }
+
+    private func updateDrag(_ sender: NSDraggingInfo) -> NSDragOperation {
         guard let state else { return [] }
-        if sender.draggingSource as? NSView != nil, (sender.draggingSource as? NSView)?.window === window {
-            return []   // ignore our own drag-outs
-        }
-        state.isDropTargeted = true
-        state.isPointerInside = true
-        if state.mode(for: displayID) != .expanded {
-            state.expand(on: displayID, reason: .drag)
-            Haptics.align(state)
+        let target = tab(at: sender.draggingLocation)
+        if state.dropTargetTab != target { state.dropTargetTab = target }
+        if isOwnDrag(sender) {
+            // Tiles dragged within the shelf can only be dropped on a tab (to move them).
+            return target == nil ? [] : .move
         }
         return .copy
     }
 
+    override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
+        guard let state else { return [] }
+        if !isOwnDrag(sender) {
+            state.isDropTargeted = true
+            state.isPointerInside = true
+            if state.mode(for: displayID) != .expanded {
+                state.expand(on: displayID, reason: .drag)
+                Haptics.align(state)
+            }
+        }
+        return updateDrag(sender)
+    }
+
     override func draggingUpdated(_ sender: NSDraggingInfo) -> NSDragOperation {
-        (sender.draggingSource as? NSView)?.window === window ? [] : .copy
+        updateDrag(sender)
     }
 
     override func draggingExited(_ sender: NSDraggingInfo?) {
         state?.isDropTargeted = false
         state?.isPointerInside = false
+        state?.dropTargetTab = nil
     }
 
     override func prepareForDragOperation(_ sender: NSDraggingInfo) -> Bool { true }
 
     override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
         guard let state else { return false }
+        let target = state.dropTargetTab ?? tab(at: sender.draggingLocation)
         state.isDropTargeted = false
+        state.dropTargetTab = nil
+
+        if isOwnDrag(sender) {
+            guard let target else { return false }
+            let urls = (sender.draggingPasteboard.readObjects(forClasses: [NSURL.self],
+                        options: [.urlReadingFileURLsOnly: true]) as? [URL]) ?? []
+            let paths = Set(urls.map(\.standardizedFileURL.path))
+            let ids = Set(state.items.filter { paths.contains($0.url.standardizedFileURL.path) }.map(\.id))
+            state.internalMoveHappened = true
+            state.move(ids, to: target.groupID)
+            Haptics.levelChange(state)
+            return true
+        }
+
+        // Dropped onto a tab: open it so the new items land (and show) there.
+        if let target { state.activeTab = target == .screenshots ? .recent : target }
         state.ingest(pasteboard: sender.draggingPasteboard)
         state.droppedOnShelf()
         Haptics.levelChange(state)

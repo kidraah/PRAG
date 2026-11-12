@@ -177,7 +177,7 @@ public struct ActionPipeline: Identifiable, Codable, Sendable, Hashable {
         isPreset: true)
 
     public static let privacyClean = ActionPipeline(
-        id: "preset.privacyClean", name: "Privacy Clean", symbol: "hand.raised",
+        id: "preset.privacyClean", name: "Privacy", symbol: "hand.raised",
         steps: [.stripMetadata, .convertImage(.jpeg)],
         isPreset: true)
 
@@ -208,7 +208,8 @@ public enum ActionCatalog {
         } else if kinds == [.video] {
             out += [.compressVideo(.p720), .compressVideo(.p1080), .extractAudio, .videoToGIF]
         }
-        out.append(.zip)
+        // Zip earns its slot for batches or anything without richer actions.
+        if count > 1 || kinds.isDisjoint(with: [.image, .pdf, .video]) { out.append(.zip) }
         return out
     }
 

@@ -31,22 +31,21 @@ struct SettingsPopoverView: View {
                     }
                     GridRow {
                         SectionLabel("Auto-Catch")
-                        SectionLabel("External displays")
+                        SectionLabel("Appearance")
                     }
                     GridRow(alignment: .top) {
                         VStack(alignment: .leading, spacing: 6) {
                             SettingToggle("Catch new screenshots", "camera.viewfinder", $s.autoCatchScreenshots)
+                                .help("Turns off the macOS floating thumbnail while on, so captures land instantly. Restored when you turn this off.")
                             SettingToggle("Clear them after 5 min", "timer", $s.screenshotExpiry)
                                 .disabled(!s.autoCatchScreenshots)
                                 .opacity(s.autoCatchScreenshots ? 1 : 0.45)
                         }
-                        Picker("", selection: $s.externalStyle) {
-                            ForEach(Settings.ExternalDisplayStyle.allCases) { Text($0.label).tag($0) }
+                        VStack(alignment: .leading, spacing: 6) {
+                            SegmentedControl(selection: $s.appearance)
+                            Text(s.appearance == .auto ? "Follows your Mac's light / dark setting" : "Always \(s.appearance.label.lowercased())")
+                                .font(Theme.label(9.5)).foregroundStyle(Theme.tertiary)
                         }
-                        .pickerStyle(.segmented)
-                        .labelsHidden()
-                        .controlSize(.small)
-                        .frame(maxWidth: 270)
                     }
                 }
 
@@ -120,8 +119,8 @@ private struct MercurySwitchStyle: ToggleStyle {
         Button { configuration.isOn.toggle() } label: {
             ZStack(alignment: configuration.isOn ? .trailing : .leading) {
                 Capsule()
-                    .fill(configuration.isOn ? AnyShapeStyle(Theme.presetGradient) : AnyShapeStyle(Color.white.opacity(0.14)))
-                    .overlay(Capsule().strokeBorder(Color.white.opacity(configuration.isOn ? 0.25 : 0.1), lineWidth: 1))
+                    .fill(configuration.isOn ? AnyShapeStyle(Theme.accent) : AnyShapeStyle(Theme.fillPressed))
+                    .overlay(Capsule().strokeBorder(configuration.isOn ? Color.clear : Theme.hairline, lineWidth: 0.75))
                 Circle()
                     .fill(.white)
                     .shadow(color: .black.opacity(0.35), radius: 1.5, y: 0.5)
@@ -131,5 +130,44 @@ private struct MercurySwitchStyle: ToggleStyle {
             .animation(.spring(response: 0.25, dampingFraction: 0.75), value: configuration.isOn)
         }
         .buttonStyle(.plain)
+    }
+}
+
+/// Compact segmented control in the shelf's own style, sized to its column.
+protocol SegmentLabeled { var label: String { get } }
+extension Settings.Appearance: SegmentLabeled {}
+
+private struct SegmentedControl<Option: Hashable & Identifiable & CaseIterable & SegmentLabeled>: View
+where Option.AllCases: RandomAccessCollection {
+    @Binding var selection: Option
+    @Namespace private var ns
+
+    var body: some View {
+        HStack(spacing: 2) {
+            ForEach(Option.allCases) { style in
+                Button {
+                    withAnimation(.spring(response: 0.28, dampingFraction: 0.85)) { selection = style }
+                } label: {
+                    Text(style.label)
+                        .font(Theme.label(10.5, selection == style ? .semibold : .medium))
+                        .foregroundStyle(selection == style ? Theme.text : Theme.secondary)
+                        .lineLimit(1)
+                        .frame(maxWidth: .infinity, minHeight: 22)
+                        .background {
+                            if selection == style {
+                                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                    .fill(Theme.fillPressed)
+                                    .matchedGeometryEffect(id: "seg", in: ns)
+                            }
+                        }
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(2)
+        .frame(width: 270)
+        .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Theme.fill))
+        .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(Theme.hairline, lineWidth: 0.75))
     }
 }

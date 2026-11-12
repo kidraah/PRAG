@@ -98,6 +98,8 @@ public struct StashedItem: Identifiable, Codable, Sendable, Hashable {
     /// Set for processed items.
     public var delta: ByteDelta?
     public var addedAt: Date
+    /// User group (tab) this item is parked in; nil = Recent.
+    public var groupID: UUID?
 
     public init(
         id: UUID = UUID(),
@@ -111,7 +113,8 @@ public struct StashedItem: Identifiable, Codable, Sendable, Hashable {
         origin: ItemOrigin = .dropped,
         appliedSteps: [ActionStep] = [],
         delta: ByteDelta? = nil,
-        addedAt: Date = Date()
+        addedAt: Date = Date(),
+        groupID: UUID? = nil
     ) {
         self.id = id
         self.url = url
@@ -127,6 +130,7 @@ public struct StashedItem: Identifiable, Codable, Sendable, Hashable {
         self.appliedSteps = appliedSteps
         self.delta = delta
         self.addedAt = addedAt
+        self.groupID = groupID
     }
 
     public var contentType: UTType? { UTType(contentTypeIdentifier) }

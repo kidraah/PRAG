@@ -21,6 +21,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         state.quickLook = quickLook
         state.pointerProbe = { [weak self] in self?.pointerIsOverOpenShelf() ?? false }
+        state.keyFocusRequest = { [weak self] in
+            guard let self, let id = self.state.openScreenID, let panel = self.controllers[id]?.panel else { return }
+            panel.makeKey()
+        }
         state.restore()
 
         rebuildWindows()
@@ -48,6 +52,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// `--settings` opens the settings page.
     private func handleLaunchArguments() {
         let args = ProcessInfo.processInfo.arguments
+        if let i = args.firstIndex(of: "--new-tab"), args.indices.contains(i + 1) {
+            let g = state.createGroup(named: args[i + 1])
+            state.activeTab = .group(g.id)
+        }
         if let i = args.firstIndex(of: "--stash") {
             let paths = args[(i + 1)...].prefix { !$0.hasPrefix("--") }
             state.add(urls: paths.map { URL(fileURLWithPath: $0) })
@@ -66,7 +74,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
                 MainActor.assumeIsolated {
                     guard let self else { return }
-                    let targets = self.state.items.filter { preset.isApplicable(kinds: [$0.kind], count: 1) }
+                    let targets = self.state.visibleItems.filter { preset.isApplicable(kinds: [$0.kind], count: 1) }
                     self.state.run(preset, on: targets)
                 }
             }
@@ -98,7 +106,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func rebuildWindows() {
         var seen = Set<CGDirectDisplayID>()
         for screen in NSScreen.screens {
-            guard let geo = NotchGeometry.make(for: screen, externalStyle: state.settings.externalStyle) else { continue }
+            guard let geo = NotchGeometry.make(for: screen) else { continue }
             seen.insert(geo.displayID)
             if let existing = controllers[geo.displayID] {
                 existing.update(geometry: geo)
@@ -106,6 +114,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 controllers[geo.displayID] = NotchWindowController(geometry: geo, state: state, quickLook: quickLook)
             }
         }
+        applyAppearance()
         for (id, controller) in controllers where !seen.contains(id) {
             controller.tearDown()
             controllers[id] = nil
@@ -260,18 +269,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             _ = state.settings.shiftTap
             _ = state.settings.shake
             _ = state.settings.autoCatchScreenshots
-            _ = state.settings.externalStyle
+            _ = state.settings.appearance
         } onChange: { [weak self] in
             Task { @MainActor [weak self] in self?.observeSettings() }
         }
         dragMonitor.shiftEnabled = state.settings.shiftTap
         dragMonitor.shakeEnabled = state.settings.shake
         applyScreenshotWatcher()
-        rebuildWindows()
+        applyAppearance()
+    }
+
+    /// Auto = nil appearance, so panels follow the system light/dark switch live.
+    private func applyAppearance() {
+        let appearance = state.settings.appearance.nsAppearance
+        for c in controllers.values { c.panel.appearance = appearance }
     }
 
     private func applyScreenshotWatcher() {
         if state.settings.autoCatchScreenshots {
+            ScreenshotPrefs.disableFloatingThumbnail()
             guard screenshotWatcher == nil else { return }
             let watcher = ScreenshotWatcherService { [weak self] url in
                 Task { @MainActor [weak self] in self?.caughtScreenshot(url) }
@@ -279,6 +295,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             watcher.start()
             screenshotWatcher = watcher
         } else {
+            ScreenshotPrefs.restoreFloatingThumbnail()
             screenshotWatcher?.stop()
             screenshotWatcher = nil
         }

@@ -1,15 +1,12 @@
 import SwiftUI
 
-/// The shelf silhouette. Drawn in "anchor space" (x along the attached screen edge, y away
-/// from it) and then mapped onto the real edge, so the same curve serves the notch, the
-/// external-display pill and the left/right edge tabs.
+/// The shelf silhouette, growing down from the top edge of the screen.
 ///
 ///      ear            body              ear
 ///   ‾‾‾‾╲_                            _╱‾‾‾‾      ← inverse (concave) ears blend into the bezel
 ///         |                          |
 ///          ╲________________________╱            ← soft bottom corners
 struct NotchShape: Shape {
-    var anchor: ShelfAnchor = .top
     var ear: CGFloat
     var bottom: CGFloat
 
@@ -19,8 +16,7 @@ struct NotchShape: Shape {
     }
 
     func path(in rect: CGRect) -> Path {
-        let W = anchor.isVertical ? rect.height : rect.width   // along the edge
-        let H = anchor.isVertical ? rect.width : rect.height   // depth
+        let W = rect.width, H = rect.height
         guard W > 0, H > 0 else { return Path() }
 
         let e = max(0, min(ear, W / 4, H))
@@ -43,32 +39,6 @@ struct NotchShape: Shape {
         // Right concave ear.
         p.addQuadCurve(to: CGPoint(x: W, y: 0), control: CGPoint(x: W - e, y: 0))
         p.closeSubpath()
-
-        let t: CGAffineTransform
-        switch anchor {
-        case .top: t = .identity
-        case .leading: t = CGAffineTransform(a: 0, b: 1, c: 1, d: 0, tx: 0, ty: 0)               // (x,y)→(y,x)
-        case .trailing: t = CGAffineTransform(a: 0, b: 1, c: -1, d: 0, tx: rect.width, ty: 0)    // (x,y)→(w−y,x)
-        }
-        return p.applying(t).offsetBy(dx: rect.minX, dy: rect.minY)
-    }
-}
-
-extension ShelfAnchor {
-    /// Gradient direction from the attached edge outward.
-    var outward: (start: UnitPoint, end: UnitPoint) {
-        switch self {
-        case .top: (.top, .bottom)
-        case .leading: (.leading, .trailing)
-        case .trailing: (.trailing, .leading)
-        }
-    }
-
-    var alignment: Alignment {
-        switch self {
-        case .top: .top
-        case .leading: .leading
-        case .trailing: .trailing
-        }
+        return p.offsetBy(dx: rect.minX, dy: rect.minY)
     }
 }
