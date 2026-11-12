@@ -17,6 +17,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var moveMonitors: [Any] = []
     private var hoverWork: DispatchWorkItem?
     private var hoverScreen: CGDirectDisplayID?
+    /// How long the pointer must rest on the notch before hover opens the shelf.
+    private static let hoverDwell: TimeInterval = 0.35
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         state.quickLook = quickLook
@@ -277,7 +279,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard hoverScreen != c.displayID else { return }
         hoverScreen = c.displayID
         let id = c.displayID
-        // A short dwell so sweeping past the notch toward the menu bar doesn't pop it open.
+        // Intent dwell: the pointer has to rest on the notch for a moment. Passing over it on the
+        // way to the menu bar leaves the rect before this fires, so nothing opens.
         let work = DispatchWorkItem { [weak self] in
             MainActor.assumeIsolated {
                 guard let self, let c = self.controllers[id],
@@ -288,7 +291,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
         hoverWork = work
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05, execute: work)
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.hoverDwell, execute: work)
     }
 
     private func cancelHover() {

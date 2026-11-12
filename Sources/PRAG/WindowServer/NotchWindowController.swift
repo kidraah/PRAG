@@ -202,11 +202,10 @@ final class ShelfHostingView<Content: View>: NSHostingView<Content> {
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 }
 
-/// Container view: drop destination for the whole shelf + hover tracking.
+/// Container view: drop destination for the whole shelf.
 final class NotchHostView: NSView {
     weak var state: AppState?
     var displayID: CGDirectDisplayID = 0
-    private var hoverWork: DispatchWorkItem?
 
     private static let acceptedTypes: [NSPasteboard.PasteboardType] =
         [.fileURL, .URL, .string, .tiff, .png] + NSFilePromiseReceiver.readableDraggedTypes.map { .init($0) }
@@ -226,44 +225,11 @@ final class NotchHostView: NSView {
         addSubview(hosting)
     }
 
-    override func updateTrackingAreas() {
-        super.updateTrackingAreas()
-        trackingAreas.forEach(removeTrackingArea)
-        addTrackingArea(NSTrackingArea(rect: .zero,
-                                       options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect],
-                                       owner: self, userInfo: nil))
-    }
-
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
-    // MARK: Hover
-
-    override func mouseEntered(with event: NSEvent) {
-        guard let state else { return }
-        state.isPointerInside = true
-        state.cancelScheduledCollapse()
-        guard state.mode(for: displayID) == .collapsed, state.settings.hoverToOpen, !state.isExternalDragActive else { return }
-        hoverWork?.cancel()
-        let id = displayID
-        let work = DispatchWorkItem { [weak self] in
-            MainActor.assumeIsolated {
-                guard let state = self?.state, state.isPointerInside else { return }
-                state.expand(on: id, reason: .hover)
-            }
-        }
-        hoverWork = work
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05, execute: work)
-    }
-
-    override func mouseExited(with event: NSEvent) {
-        guard let state else { return }
-        state.isPointerInside = false
-        hoverWork?.cancel()
-        guard state.mode(for: displayID) != .collapsed, !state.isExternalDragActive else { return }
-        if state.reason == .hover || state.reason == .screenshot || state.reason?.isDragDriven == true {
-            state.scheduleCollapse(after: 0.45)
-        }
-    }
+    // Hover open/close is handled only by AppDelegate.pointerMoved(), which tests the exact
+    // notch / pill rect. This window is much larger than the notch (it never resizes), so
+    // window-level enter/exit events would fire far too early.
 
     // MARK: Drop destination
 

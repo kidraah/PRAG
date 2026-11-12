@@ -275,7 +275,7 @@ public actor PipelineChainer {
     }
 
     /// Normalises errors coming out of services: cancellation → `.cancelled`, foreign errors → `.failed`.
-    private func translate<T>(_ body: () async throws -> T) async throws -> T {
+    private func translate<T: Sendable>(_ body: () async throws -> T) async throws -> T {
         do {
             return try await body()
         } catch let error as PipelineError {
