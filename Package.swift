@@ -2,29 +2,29 @@
 import PackageDescription
 
 // Two targets on purpose:
-//  - NotchPipeCore: pure, testable models + file-transformation services (no AppKit UI).
-//  - NotchPipe:     the executable — window server plumbing, input monitors, SwiftUI.
+//  - PRAGCore: pure, testable models + file-transformation services (no AppKit UI).
+//  - PRAG:     the executable — window server plumbing, input monitors, SwiftUI.
 // Keeping them apart lets backend work build and test independently of the UI.
 let package = Package(
-    name: "NotchPipe",
+    name: "PRAG",
     platforms: [.macOS(.v14)],
     products: [
-        .executable(name: "NotchPipe", targets: ["NotchPipe"]),
-        .library(name: "NotchPipeCore", targets: ["NotchPipeCore"]),
+        .executable(name: "PRAG", targets: ["PRAG"]),
+        .library(name: "PRAGCore", targets: ["PRAGCore"]),
     ],
     dependencies: [
         .package(url: "https://github.com/SDWebImage/libwebp-Xcode", from: "1.3.2"),
     ],
     targets: [
         .target(
-            name: "NotchPipeCore",
+            name: "PRAGCore",
             dependencies: [.product(name: "libwebp", package: "libwebp-Xcode")],
-            path: "Sources/NotchPipeCore"
+            path: "Sources/PRAGCore"
         ),
         .executableTarget(
-            name: "NotchPipe",
-            dependencies: ["NotchPipeCore"],
-            path: "Sources/NotchPipe",
+            name: "PRAG",
+            dependencies: ["PRAGCore"],
+            path: "Sources/PRAG",
             linkerSettings: [
                 .linkedFramework("AppKit"),
                 .linkedFramework("Carbon"),
@@ -32,9 +32,9 @@ let package = Package(
             ]
         ),
         .testTarget(
-            name: "NotchPipeCoreTests",
-            dependencies: ["NotchPipeCore"],
-            path: "Tests/NotchPipeCoreTests"
+            name: "PRAGCoreTests",
+            dependencies: ["PRAGCore"],
+            path: "Tests/PRAGCoreTests"
         ),
     ]
 )

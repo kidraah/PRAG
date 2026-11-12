@@ -5,15 +5,15 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleExecutable</key>
-	<string>NotchPipe</string>
+	<string>PRAG</string>
 	<key>CFBundleIdentifier</key>
-	<string>dev.notchpipe.NotchPipe</string>
+	<string>dev.prag.PRAG</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>NotchPipe</string>
+	<string>PRAG</string>
 	<key>CFBundleDisplayName</key>
-	<string>NotchPipe</string>
+	<string>PRAG</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -31,8 +31,8 @@
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
 	<key>NSDesktopFolderUsageDescription</key>
-	<string>NotchPipe watches your screenshot folder so new screenshots appear in the notch shelf (only when Auto-Catch is on).</string>
+	<string>PRAG watches your screenshot folder so new screenshots appear in the notch shelf (only when Auto-Catch is on).</string>
 	<key>NSAppleEventsUsageDescription</key>
-	<string>NotchPipe asks Finder for the current selection when you press the stash shortcut.</string>
+	<string>PRAG asks Finder for the current selection when you press the stash shortcut.</string>
 </dict>
 </plist>

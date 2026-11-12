@@ -1,4 +1,4 @@
-APP_NAME   := NotchPipe
+APP_NAME   := PRAG
 BUILD_DIR  := build
 APP        := $(BUILD_DIR)/$(APP_NAME).app
 CONFIG     ?= release
