@@ -56,6 +56,9 @@ struct NotchContainerView: View {
         .frame(width: size.width, height: size.height)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .coordinateSpace(name: ShelfSpace.name)
+        .onPreferenceChange(DemoAnchorKey.self) { anchors in
+            MainActor.assumeIsolated { state.demoAnchors.merge(anchors) { $1 } }
+        }
         .animation(.shelfExpand, value: state.page)
     }
 

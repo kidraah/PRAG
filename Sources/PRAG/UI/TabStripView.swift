@@ -14,7 +14,7 @@ struct TabStripView: View {
             ScrollViewReader { proxy in
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 4) {
-                        chip(.recent, title: "Recent", symbol: "clock")
+                        chip(.recent, title: "Recent", symbol: "clock").demoAnchor("tab.recent")
                         if state.showsScreenshotsTab {
                             chip(.screenshots, title: "Screenshots", symbol: "camera.viewfinder")
                         }
@@ -26,6 +26,7 @@ struct TabStripView: View {
                                 renameField(group).id(group.id)
                             } else {
                                 chip(.group(group.id), title: group.name, symbol: "folder")
+                                    .demoAnchor("tab.group.\(group.name)")
                                     .id(group.id)
                                     .contextMenu { groupMenu(group) }
                             }
@@ -45,6 +46,7 @@ struct TabStripView: View {
             })
 
             NewTabButton(hasSelection: !state.selection.isEmpty) { newGroup() }
+                .demoAnchor("tab.new")
         }
         .onPreferenceChange(TabFramesKey.self) { frames in
             MainActor.assumeIsolated { state.tabFrames = frames }

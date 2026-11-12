@@ -75,7 +75,7 @@ final class AppState {
     private(set) var reason: ExpansionReason?
     var page: ShelfPage = .shelf
     var viewMode: ShelfViewMode = .grid {
-        didSet { UserDefaults.standard.set(viewMode.rawValue, forKey: "viewMode") }
+        didSet { AppEnv.defaults.set(viewMode.rawValue, forKey: "viewMode") }
     }
     var isPinned = false
     var isDropTargeted = false
@@ -101,6 +101,8 @@ final class AppState {
     @ObservationIgnored var internalMoveHappened = false
     /// Makes the open shelf's panel key (for text entry). Set by AppDelegate.
     @ObservationIgnored var keyFocusRequest: (() -> Void)?
+    /// Screen-space frames of named controls (demo mode drives a cursor to them).
+    @ObservationIgnored var demoAnchors: [String: CGRect] = [:]
 
     func requestKeyFocus() { keyFocusRequest?() }
 
@@ -110,9 +112,7 @@ final class AppState {
     /// Live check of whether the pointer is over the open shelf (set by AppDelegate).
     @ObservationIgnored var pointerProbe: (() -> Bool)?
 
-    @ObservationIgnored let storage = StashStorageService(
-        rootURL: FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("PRAG", isDirectory: true))
+    @ObservationIgnored let storage = StashStorageService(rootURL: AppEnv.storageRoot)
     @ObservationIgnored private(set) lazy var chainer = PipelineChainer(storage: storage)
     @ObservationIgnored private var jobTasks: [UUID: Task<Void, Never>] = [:]
     @ObservationIgnored private var collapseWork: DispatchWorkItem?
@@ -121,10 +121,10 @@ final class AppState {
     @ObservationIgnored private var expiryTimers: [UUID: DispatchWorkItem] = [:]
 
     init() {
-        if let raw = UserDefaults.standard.string(forKey: "viewMode"), let m = ShelfViewMode(rawValue: raw) {
+        if let raw = AppEnv.defaults.string(forKey: "viewMode"), let m = ShelfViewMode(rawValue: raw) {
             viewMode = m
         }
-        if let data = UserDefaults.standard.data(forKey: "groups"),
+        if let data = AppEnv.defaults.data(forKey: "groups"),
            let saved = try? JSONDecoder().decode([ShelfGroup].self, from: data) {
             groups = saved
         }
@@ -347,7 +347,7 @@ final class AppState {
     }
 
     private func saveGroups() {
-        if let data = try? JSONEncoder().encode(groups) { UserDefaults.standard.set(data, forKey: "groups") }
+        if let data = try? JSONEncoder().encode(groups) { AppEnv.defaults.set(data, forKey: "groups") }
     }
 
     /// Finder-like click selection.

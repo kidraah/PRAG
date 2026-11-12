@@ -26,7 +26,7 @@ final class Settings {
         }
     }
 
-    @ObservationIgnored private let defaults = UserDefaults.standard
+    @ObservationIgnored private let defaults = AppEnv.defaults
 
     var dragProximity: Bool { didSet { defaults.set(dragProximity, forKey: "dragProximity") } }
     var shiftTap: Bool { didSet { defaults.set(shiftTap, forKey: "shiftTap") } }

@@ -90,6 +90,7 @@ private struct ItemTile: View {
             ZStack(alignment: .bottom) {
                 ThumbnailView(url: item.url, side: 58, corner: 11)
                     .shadow(color: .black.opacity(0.4), radius: 3, y: 1.5)
+                    .demoAnchor("tile.\(item.displayName)")
                 if let delta = item.delta {
                     DeltaBadge(delta: delta, compact: true)
                         .offset(y: 7)
@@ -137,6 +138,7 @@ private struct ItemTile: View {
         .overlay(alignment: .topTrailing) {
             if showsCheck {
                 CheckDot(isOn: selected) { state.click(item.id, command: true, shift: false) }
+                    .demoAnchor("check.\(item.displayName)")
                     .padding(1)
                     .transition(.scale(scale: 0.5).combined(with: .opacity))
             }

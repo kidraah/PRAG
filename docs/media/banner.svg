@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 430" width="1200" height="430" role="img" aria-label="PRAG — the notch becomes a drag-and-drop shelf">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#14161f"/><stop offset="1" stop-color="#07080c"/>
+    </linearGradient>
+    <radialGradient id="glow" cx=".5" cy="0" r=".75">
+      <stop offset="0" stop-color="#5b6cff" stop-opacity=".38"/>
+      <stop offset=".45" stop-color="#c2508f" stop-opacity=".12"/>
+      <stop offset="1" stop-color="#000" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="shelf" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#000"/><stop offset="1" stop-color="#000"/>
+    </linearGradient>
+    <linearGradient id="rim" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".35" stop-color="#fff" stop-opacity=".14"/>
+    </linearGradient>
+    <linearGradient id="t1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6d7dff"/><stop offset=".45" stop-color="#f06a6a"/><stop offset="1" stop-color="#b9ee4a"/></linearGradient>
+    <linearGradient id="t2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#d9b8ff"/><stop offset=".5" stop-color="#7b3cff"/><stop offset="1" stop-color="#8fe0c8"/></linearGradient>
+    <linearGradient id="t3" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0d2233"/><stop offset=".55" stop-color="#9fd3ec"/><stop offset="1" stop-color="#173246"/></linearGradient>
+    <linearGradient id="t4" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#eef0f6"/><stop offset="1" stop-color="#9aa3c4"/></linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="160%">
+      <feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="#000" flood-opacity=".55"/>
+    </filter>
+    <clipPath id="shape"><path d="M494.00,0.00 Q500.00,0.00 500.00,6.00 L500.00,21.00 C500.00,27.05 504.95,32.00 511.00,32.00 L689.00,32.00 C695.05,32.00 700.00,27.05 700.00,21.00 L700.00,6.00 Q700.00,0.00 706.00,0.00 Z"><animate attributeName="d" dur="7.0s" repeatCount="indefinite" calcMode="spline" keyTimes="0.0000;0.1000;0.1786;0.7714;0.8429;1.0000" keySplines="0 0 1 1;0.22 0.9 0.32 1;0 0 1 1;0.45 0 0.2 1;0 0 1 1" values="M494.00,0.00 Q500.00,0.00 500.00,6.00 L500.00,21.00 C500.00,27.05 504.95,32.00 511.00,32.00 L689.00,32.00 C695.05,32.00 700.00,27.05 700.00,21.00 L700.00,6.00 Q700.00,0.00 706.00,0.00 Z;M494.00,0.00 Q500.00,0.00 500.00,6.00 L500.00,21.00 C500.00,27.05 504.95,32.00 511.00,32.00 L689.00,32.00 C695.05,32.00 700.00,27.05 700.00,21.00 L700.00,6.00 Q700.00,0.00 706.00,0.00 Z;M262.00,0.00 Q280.00,0.00 280.00,18.00 L280.00,170.00 C280.00,186.50 293.50,200.00 310.00,200.00 L890.00,200.00 C906.50,200.00 920.00,186.50 920.00,170.00 L920.00,18.00 Q920.00,0.00 938.00,0.00 Z;M262.00,0.00 Q280.00,0.00 280.00,18.00 L280.00,170.00 C280.00,186.50 293.50,200.00 310.00,200.00 L890.00,200.00 C906.50,200.00 920.00,186.50 920.00,170.00 L920.00,18.00 Q920.00,0.00 938.00,0.00 Z;M494.00,0.00 Q500.00,0.00 500.00,6.00 L500.00,21.00 C500.00,27.05 504.95,32.00 511.00,32.00 L689.00,32.00 C695.05,32.00 700.00,27.05 700.00,21.00 L700.00,6.00 Q700.00,0.00 706.00,0.00 Z;M494.00,0.00 Q500.00,0.00 500.00,6.00 L500.00,21.00 C500.00,27.05 504.95,32.00 511.00,32.00 L689.00,32.00 C695.05,32.00 700.00,27.05 700.00,21.00 L700.00,6.00 Q700.00,0.00 706.00,0.00 Z"/></path></clipPath>
+  </defs>
+
+  <rect width="1200" height="430" rx="28" fill="url(#bg)"/>
+  <rect width="1200" height="430" rx="28" fill="url(#glow)"/>
+  <!-- the top edge of the screen -->
+  <rect x="0" y="0" width="1200" height="1.5" fill="#fff" fill-opacity=".08"/>
+
+  <g filter="url(#shadow)">
+    <path d="M494.00,0.00 Q500.00,0.00 500.00,6.00 L500.00,21.00 C500.00,27.05 504.95,32.00 511.00,32.00 L689.00,32.00 C695.05,32.00 700.00,27.05 700.00,21.00 L700.00,6.00 Q700.00,0.00 706.00,0.00 Z" fill="url(#shelf)"><animate attributeName="d" dur="7.0s" repeatCount="indefinite" calcMode="spline" keyTimes="0.0000;0.1000;0.1786;0.7714;0.8429;1.0000" keySplines="0 0 1 1;0.22 0.9 0.32 1;0 0 1 1;0.45 0 0.2 1;0 0 1 1" values="M494.00,0.00 Q500.00,0.00 500.00,6.00 L500.00,21.00 C500.00,27.05 504.95,32.00 511.00,32.00 L689.00,32.00 C695.05,32.00 700.00,27.05 700.00,21.00 L700.00,6.00 Q700.00,0.00 706.00,0.00 Z;M494.00,0.00 Q500.00,0.00 500.00,6.00 L500.00,21.00 C500.00,27.05 504.95,32.00 511.00,32.00 L689.00,32.00 C695.05,32.00 700.00,27.05 700.00,21.00 L700.00,6.00 Q700.00,0.00 706.00,0.00 Z;M262.00,0.00 Q280.00,0.00 280.00,18.00 L280.00,170.00 C280.00,186.50 293.50,200.00 310.00,200.00 L890.00,200.00 C906.50,200.00 920.00,186.50 920.00,170.00 L920.00,18.00 Q920.00,0.00 938.00,0.00 Z;M262.00,0.00 Q280.00,0.00 280.00,18.00 L280.00,170.00 C280.00,186.50 293.50,200.00 310.00,200.00 L890.00,200.00 C906.50,200.00 920.00,186.50 920.00,170.00 L920.00,18.00 Q920.00,0.00 938.00,0.00 Z;M494.00,0.00 Q500.00,0.00 500.00,6.00 L500.00,21.00 C500.00,27.05 504.95,32.00 511.00,32.00 L689.00,32.00 C695.05,32.00 700.00,27.05 700.00,21.00 L700.00,6.00 Q700.00,0.00 706.00,0.00 Z;M494.00,0.00 Q500.00,0.00 500.00,6.00 L500.00,21.00 C500.00,27.05 504.95,32.00 511.00,32.00 L689.00,32.00 C695.05,32.00 700.00,27.05 700.00,21.00 L700.00,6.00 Q700.00,0.00 706.00,0.00 Z"/></path>
+  </g>
+  <path d="M494.00,0.00 Q500.00,0.00 500.00,6.00 L500.00,21.00 C500.00,27.05 504.95,32.00 511.00,32.00 L689.00,32.00 C695.05,32.00 700.00,27.05 700.00,21.00 L700.00,6.00 Q700.00,0.00 706.00,0.00 Z" fill="none" stroke="url(#rim)" stroke-width="1.5"><animate attributeName="d" dur="7.0s" repeatCount="indefinite" calcMode="spline" keyTimes="0.0000;0.1000;0.1786;0.7714;0.8429;1.0000" keySplines="0 0 1 1;0.22 0.9 0.32 1;0 0 1 1;0.45 0 0.2 1;0 0 1 1" values="M494.00,0.00 Q500.00,0.00 500.00,6.00 L500.00,21.00 C500.00,27.05 504.95,32.00 511.00,32.00 L689.00,32.00 C695.05,32.00 700.00,27.05 700.00,21.00 L700.00,6.00 Q700.00,0.00 706.00,0.00 Z;M494.00,0.00 Q500.00,0.00 500.00,6.00 L500.00,21.00 C500.00,27.05 504.95,32.00 511.00,32.00 L689.00,32.00 C695.05,32.00 700.00,27.05 700.00,21.00 L700.00,6.00 Q700.00,0.00 706.00,0.00 Z;M262.00,0.00 Q280.00,0.00 280.00,18.00 L280.00,170.00 C280.00,186.50 293.50,200.00 310.00,200.00 L890.00,200.00 C906.50,200.00 920.00,186.50 920.00,170.00 L920.00,18.00 Q920.00,0.00 938.00,0.00 Z;M262.00,0.00 Q280.00,0.00 280.00,18.00 L280.00,170.00 C280.00,186.50 293.50,200.00 310.00,200.00 L890.00,200.00 C906.50,200.00 920.00,186.50 920.00,170.00 L920.00,18.00 Q920.00,0.00 938.00,0.00 Z;M494.00,0.00 Q500.00,0.00 500.00,6.00 L500.00,21.00 C500.00,27.05 504.95,32.00 511.00,32.00 L689.00,32.00 C695.05,32.00 700.00,27.05 700.00,21.00 L700.00,6.00 Q700.00,0.00 706.00,0.00 Z;M494.00,0.00 Q500.00,0.00 500.00,6.00 L500.00,21.00 C500.00,27.05 504.95,32.00 511.00,32.00 L689.00,32.00 C695.05,32.00 700.00,27.05 700.00,21.00 L700.00,6.00 Q700.00,0.00 706.00,0.00 Z"/></path>
+  <!-- camera -->
+  <circle cx="600.0" cy="15" r="4.5" fill="#1b1d26"/><circle cx="600.0" cy="15" r="2" fill="#2b3a5c"/>
+
+  <g clip-path="url(#shape)">
+    <g opacity="0"><animate attributeName="opacity" dur="7.0s" repeatCount="indefinite" keyTimes="0.0000;0.1714;0.2071;0.7571;0.7743;1.0000" values="0;0;1;1;0;0"/>
+      <text x="300.0" y="25" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Inter, Helvetica, Arial, sans-serif" font-size="14" font-weight="800" letter-spacing=".6" fill="#fff">PRAG</text>
+      <text x="348.0" y="25" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Inter, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="500" fill="#fff" fill-opacity=".5">4 · 34.1 MB</text>
+      <rect x="790.0" y="12" width="110" height="20" rx="10" fill="#fff" fill-opacity=".1"/>
+      <text x="845.0" y="26" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Inter, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600" fill="#fff" fill-opacity=".75">Web Ready</text>
+    </g>
+    <g opacity="0"><animate attributeName="opacity" dur="7.0s" repeatCount="indefinite" keyTimes="0.0000;0.1929;0.2357;0.7643;0.7857;1.0000" values="0;0;1;1;0;0"/>
+      <g><animateTransform attributeName="transform" type="translate" dur="7.0s" repeatCount="indefinite" calcMode="spline" keyTimes="0.0000;0.1929;0.2429;1.0000" keySplines="0 0 1 1;0.2 0.9 0.3 1;0 0 1 1" values="0 10;0 10;0 0;0 0"/>
+        <rect x="377.0" y="78" width="92" height="92" rx="18" fill="url(#t1)"/>
+        <rect x="377.0" y="78" width="92" height="92" rx="18" fill="none" stroke="#fff" stroke-opacity=".12"/>
+        <text x="423.0" y="192" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Inter, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="600" fill="#fff" fill-opacity=".9">Sunset Ridge.jpg</text>
+      </g>
+    </g>
+    <g opacity="0"><animate attributeName="opacity" dur="7.0s" repeatCount="indefinite" keyTimes="0.0000;0.2100;0.2529;0.7643;0.7857;1.0000" values="0;0;1;1;0;0"/>
+      <g><animateTransform attributeName="transform" type="translate" dur="7.0s" repeatCount="indefinite" calcMode="spline" keyTimes="0.0000;0.2100;0.2600;1.0000" keySplines="0 0 1 1;0.2 0.9 0.3 1;0 0 1 1" values="0 10;0 10;0 0;0 0"/>
+        <rect x="495.0" y="78" width="92" height="92" rx="18" fill="url(#t2)"/>
+        <rect x="495.0" y="78" width="92" height="92" rx="18" fill="none" stroke="#fff" stroke-opacity=".12"/>
+        <text x="541.0" y="192" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Inter, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="600" fill="#fff" fill-opacity=".9">Brand Mockup.png</text>
+      </g>
+    </g>
+    <g opacity="0"><animate attributeName="opacity" dur="7.0s" repeatCount="indefinite" keyTimes="0.0000;0.2271;0.2700;0.7643;0.7857;1.0000" values="0;0;1;1;0;0"/>
+      <g><animateTransform attributeName="transform" type="translate" dur="7.0s" repeatCount="indefinite" calcMode="spline" keyTimes="0.0000;0.2271;0.2771;1.0000" keySplines="0 0 1 1;0.2 0.9 0.3 1;0 0 1 1" values="0 10;0 10;0 0;0 0"/>
+        <rect x="613.0" y="78" width="92" height="92" rx="18" fill="url(#t3)"/>
+        <rect x="613.0" y="78" width="92" height="92" rx="18" fill="none" stroke="#fff" stroke-opacity=".12"/>
+        <text x="659.0" y="192" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Inter, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="600" fill="#fff" fill-opacity=".9">IMG_4821.HEIC</text>
+      </g>
+    </g>
+    <g opacity="0"><animate attributeName="opacity" dur="7.0s" repeatCount="indefinite" keyTimes="0.0000;0.2443;0.2871;0.7643;0.7857;1.0000" values="0;0;1;1;0;0"/>
+      <g><animateTransform attributeName="transform" type="translate" dur="7.0s" repeatCount="indefinite" calcMode="spline" keyTimes="0.0000;0.2443;0.2943;1.0000" keySplines="0 0 1 1;0.2 0.9 0.3 1;0 0 1 1" values="0 10;0 10;0 0;0 0"/>
+        <rect x="731.0" y="78" width="92" height="92" rx="18" fill="url(#t4)"/>
+        <rect x="731.0" y="78" width="92" height="92" rx="18" fill="none" stroke="#fff" stroke-opacity=".12"/>
+        <text x="777.0" y="192" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Inter, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="600" fill="#fff" fill-opacity=".9">Pitch Deck.pdf</text>
+      </g>
+    </g>
+    <g opacity="0"><animate attributeName="opacity" dur="7.0s" repeatCount="indefinite" keyTimes="0.0000;0.2929;0.3143;0.3929;0.4071;1.0000" values="0;0;1;1;0;0"/>
+      <circle cx="541.0" cy="124.0" r="25" fill="#000" fill-opacity=".55"/>
+      <circle cx="541.0" cy="124.0" r="15" fill="none" stroke="#fff" stroke-opacity=".18" stroke-width="3.5"/>
+      <circle cx="541.0" cy="124.0" r="15" fill="none" stroke="#0A84FF" stroke-width="3.5" stroke-linecap="round"
+              stroke-dasharray="94.2" stroke-dashoffset="94.2" transform="rotate(-90 541.0 124.0)">
+        <animate attributeName="stroke-dashoffset" dur="7.0s" repeatCount="indefinite"
+                 keyTimes="0.0000;0.2929;0.3857;1.0000" values="94.2;94.2;0;0"/>
+      </circle>
+    </g>
+    <g opacity="0"><animate attributeName="opacity" dur="7.0s" repeatCount="indefinite" keyTimes="0.0000;0.3929;0.4214;0.7643;0.7857;1.0000" values="0;0;1;1;0;0"/>
+      <g><animateTransform attributeName="transform" type="translate" dur="7.0s" repeatCount="indefinite" calcMode="spline" keyTimes="0.0000;0.3929;0.4357;1.0000" keySplines="0 0 1 1;0.2 0.9 0.3 1;0 0 1 1" values="0 6;0 6;0 0;0 0"/>
+        <rect x="507.0" y="158" width="68" height="24" rx="12" fill="#06140b" stroke="#30D158" stroke-opacity=".6"/>
+        <text x="541.0" y="174.5" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Inter, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="800" fill="#30D158">↓ −99%</text>
+      </g>
+    </g>
+  </g>
+
+  <text x="600.0" y="308" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Inter, Helvetica, Arial, sans-serif" font-size="72" font-weight="800" letter-spacing="10" fill="#fff">PRAG</text>
+  <text x="600.0" y="350" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Inter, Helvetica, Arial, sans-serif" font-size="19" font-weight="600" letter-spacing="5" fill="#fff" fill-opacity=".62">PARK  ·  RETRIEVE  ·  ACT  ·  GO</text>
+  <text x="600.0" y="386" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Inter, Helvetica, Arial, sans-serif" font-size="16.5" font-weight="500" fill="#fff" fill-opacity=".42">Your MacBook notch, turned into a drag-and-drop workbench.</text>
+</svg>

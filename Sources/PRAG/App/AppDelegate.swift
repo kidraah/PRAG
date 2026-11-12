@@ -25,6 +25,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             guard let self, let id = self.state.openScreenID, let panel = self.controllers[id]?.panel else { return }
             panel.makeKey()
         }
+        if AppEnv.isDemo {
+            rebuildWindows()
+            observeSettings()
+            startDemo()
+            return
+        }
         state.restore()
 
         rebuildWindows()
@@ -46,6 +52,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         setupStatusItem()
         observeSettings()
         handleLaunchArguments()
+    }
+
+    private var demoDirector: DemoDirector?
+
+    /// README recordings: scripted scene on a throwaway shelf (see DemoDirector).
+    private func startDemo() {
+        let args = ProcessInfo.processInfo.arguments
+        func value(_ flag: String) -> String? {
+            args.firstIndex(of: flag).flatMap { args.indices.contains($0 + 1) ? args[$0 + 1] : nil }
+        }
+        guard let scene = value("--demo"), let dir = value("--demo-files"),
+              let notch = controllers.values.first(where: { $0.geometry.kind == .notch }) ?? controllers.values.first,
+              let screen = NSScreen.screens.first(where: { $0.displayID == notch.displayID }) else {
+            NSLog("PRAG demo: usage --demo <scene> --demo-files <dir> [--demo-log <file>] [--light]")
+            return
+        }
+        let director = DemoDirector(state: state, controller: notch, screen: screen,
+                                    files: URL(fileURLWithPath: dir),
+                                    logURL: value("--demo-log").map { URL(fileURLWithPath: $0) })
+        demoDirector = director
+        Task { await director.run(scene: scene, light: args.contains("--light")) }
     }
 
     /// Dev/test hooks: `--stash <paths…>` adds files, `--open-shelf` expands on launch,

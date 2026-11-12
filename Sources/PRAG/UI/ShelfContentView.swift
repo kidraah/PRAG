@@ -74,6 +74,7 @@ private struct HeaderBand: View {
         HStack(spacing: 7) {
             if state.page == .settings {
                 BandButton(symbol: "chevron.left", help: "Back to shelf") { state.page = .shelf }
+                    .demoAnchor("back")
                 Text("Settings").font(Theme.label(12, .semibold)).foregroundStyle(Theme.text)
             } else {
                 Image(systemName: state.jobs.isEmpty ? "tray.full.fill" : "gearshape.2.fill")
@@ -117,6 +118,7 @@ private struct HeaderBand: View {
                 BandButton(symbol: state.isPinned ? "pin.fill" : "pin", active: state.isPinned,
                            help: state.isPinned ? "Unpin" : "Keep open") { state.isPinned.toggle() }
                 BandButton(symbol: "gearshape", help: "Settings") { state.page = .settings }
+                    .demoAnchor("gear")
             } else {
                 BandButton(symbol: "xmark", help: "Close") { state.collapse() }
             }

@@ -163,6 +163,7 @@ where Option.AllCases: RandomAccessCollection {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .demoAnchor("segment.\(style.label)")
             }
         }
         .padding(2)

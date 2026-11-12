@@ -53,6 +53,7 @@ struct ActionBarView: View {
                     Pill(title: preset.name, symbol: preset.symbol, prominence: .preset, help: preset.breadcrumb) {
                         state.run(preset)
                     }
+                    .demoAnchor(preset.id)
                 }
                 if !presets.isEmpty && !singles.isEmpty { SeparatorDot() }
                 ForEach(others, id: \.self) { step in
