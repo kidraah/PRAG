@@ -24,10 +24,11 @@
   <a href="#under-the-hood">Under the hood</a>
 </p>
 
-<br>
+
+---
 
 <p align="center">
-  <img src="docs/media/park.gif" alt="Dragging three files from the desktop into the MacBook notch" width="100%">
+  <img src="docs/media/park.gif" alt="Dragging three files from the desktop into the MacBook notch" width="82%">
 </p>
 
 ---
@@ -43,7 +44,8 @@ You're dragging a screenshot into Slack, a stack of PDFs into a portal, a 9 MB p
 - **Originals are sacred.** Every action writes a **new** file next to the source, with a badge showing exactly what you saved.
 - **It feels like macOS.** Native AppKit + SwiftUI, system colours, light & dark, zero focus-stealing.
 
-<br>
+
+---
 
 ## Park
 
@@ -62,14 +64,15 @@ Drag anything toward the top of the screen: files, folders, links, text, images 
 
 On an external display PRAG lives in a slim pill at the top centre, so it works the same way everywhere.
 
-<br>
+
+---
 
 ## Retrieve
 
 > *Everything you parked, organised the moment you need it.*
 
 <p align="center">
-  <img src="docs/media/sort.gif" alt="Selecting two PDFs, creating a Client Work tab, and dragging an image onto it" width="100%">
+  <img src="docs/media/sort.gif" alt="Selecting two PDFs, creating a Client Work tab, and dragging an image onto it" width="82%">
 </p>
 
 - **Recent** is where new drops land. **Screenshots** collects auto-caught captures.
@@ -78,14 +81,15 @@ On an external display PRAG lives in a slim pill at the top centre, so it works 
 - <kbd>Space</kbd> Quick Look · <kbd>⌘</kbd><kbd>A</kbd> select all · <kbd>⌫</kbd> remove from shelf · <kbd>⌘</kbd><kbd>C</kbd> copy files · <kbd>⌘</kbd><kbd>V</kbd> paste into the shelf
 - The shelf survives restarts, and removing an item never touches the file on disk.
 
-<br>
+
+---
 
 ## Act
 
 > *The right actions for what's selected, plus one-click chains.*
 
 <p align="center">
-  <img src="docs/media/act.gif" alt="One click on Web Ready turns three large images into WebP copies with savings badges" width="100%">
+  <img src="docs/media/act.gif" alt="One click on Web Ready turns three large images into WebP copies with savings badges" width="82%">
 </p>
 
 PRAG looks at what you've selected (or the whole tab) and offers only what makes sense:
@@ -108,7 +112,8 @@ PRAG looks at what you've selected (or the whole tab) and offers only what makes
 
 Or press **🔗** to build your own 2–3 step chain on the spot. Every run shows a live progress ring you can cancel, and lands as a **new** item with a savings badge, e.g. <code>↓ −64% · 5.1 MB → 1.8 MB</code>.
 
-<br>
+
+---
 
 ## Go
 
@@ -116,12 +121,13 @@ Or press **🔗** to build your own 2–3 step chain on the spot. Every run show
 
 Drag one tile, or a whole multi-selection from different folders, out of the notch into a browser upload, Slack, Mail, Figma or Finder. It's a real multi-item drag, so ten files from four folders leave in one gesture. Right-click any tile to Open, Reveal in Finder, Copy, Move to a tab, or Remove.
 
-<br>
+
+---
 
 ## Looks like it shipped with your Mac
 
 <p align="center">
-  <img src="docs/media/theme.gif" alt="Switching PRAG between light and dark appearance in settings" width="100%">
+  <img src="docs/media/theme.gif" alt="Switching PRAG between light and dark appearance in settings" width="82%">
 </p>
 
 <table>
@@ -137,7 +143,8 @@ Drag one tile, or a whole multi-selection from different folders, out of the not
 
 **Auto** follows your Mac's appearance live; Light and Dark are there if you want to pin one. Collapsed, the shelf stays pure black in both, so it disappears into the camera housing.
 
-<br>
+
+---
 
 ## Small, quiet, fast
 
@@ -150,7 +157,8 @@ Drag one tile, or a whole multi-selection from different folders, out of the not
 | **Clicks** | Never blocks the menu bar: the collapsed notch is fully click-through |
 | **Focus** | Never steals it: a non-activating panel on every Space, including over full-screen apps |
 
-<br>
+
+---
 
 ## Install
 
@@ -171,7 +179,8 @@ make run        # build, bundle build/PRAG.app, launch
 
 PRAG lives in the menu bar (no Dock icon). The first time you stash a Finder selection with the hotkey, macOS asks to let PRAG control Finder; that's the only permission it needs.
 
-<br>
+
+---
 
 ## Privacy
 
@@ -179,7 +188,8 @@ PRAG is **local-only**. It makes no network requests and has no analytics or acc
 
 While *Auto-Catch screenshots* is on, PRAG turns off macOS's floating screenshot thumbnail (which otherwise holds new files back for about 5 seconds), and restores your previous setting when you turn it off.
 
-<br>
+
+---
 
 ## Under the hood
 
@@ -212,7 +222,8 @@ Sources/
 
 <details>
 <summary><b>How the media in this README is made</b></summary>
-<br>
+
+---
 
 Everything above is real app footage, not mock-ups. `PRAG --demo <scene>` plays a scripted scene on a throwaway shelf over a clean wallpaper, drives a virtual cursor to real controls, and logs camera keyframes. Two scripts turn that into the clips:
 
@@ -227,7 +238,8 @@ python3 scripts/readme-media/banner.py                                     # doc
 `render.py` syncs on a one-frame marker, replays the camera as an eased zoom-and-follow, frames the footage in a rounded window, and encodes MP4 + GIF (needs ffmpeg, gifski, Pillow and NumPy).
 </details>
 
-<br>
+
+---
 
 ## License
 
