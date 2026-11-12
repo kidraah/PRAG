@@ -88,7 +88,18 @@ enum MediaSupport {
 
     static func normalize(_ error: Error) -> PipelineError {
         if let e = error as? PipelineError { return e }
-        if error is CancellationError { return .cancelled }
+        // Frameworks report a cancelled operation in their own words (AVFoundation on macOS 15
+        // throws a generic "Operation cancelled"), so a cancelled task always wins.
+        if error is CancellationError || Task.isCancelled || isCancellation(error) { return .cancelled }
         return .failed(error.localizedDescription)
+    }
+
+    /// Cocoa / URL "user cancelled" codes, including when wrapped as an underlying error.
+    static func isCancellation(_ error: Error) -> Bool {
+        let ns = error as NSError
+        if ns.domain == NSCocoaErrorDomain && ns.code == NSUserCancelledError { return true }
+        if ns.domain == NSURLErrorDomain && ns.code == NSURLErrorCancelled { return true }
+        if let underlying = ns.userInfo[NSUnderlyingErrorKey] as? Error { return isCancellation(underlying) }
+        return false
     }
 }
