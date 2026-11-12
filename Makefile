@@ -35,9 +35,18 @@ TEST_FLAGS := $(if $(wildcard $(CLT_FW)/Testing.framework),-Xswiftc -F -Xswiftc 
 test:
 	swift test --scratch-path $(SCRATCH) $(TEST_FLAGS)
 
+VERSION    := $(shell /usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" Info.plist)
+DMG        := $(BUILD_DIR)/$(APP_NAME)-$(VERSION).dmg
+
+# Drag-to-install disk image: PRAG.app next to an Applications shortcut.
 dmg: app
-	@rm -f "$(BUILD_DIR)/$(APP_NAME).dmg"
-	hdiutil create -volname "$(APP_NAME)" -srcfolder "$(APP)" -ov -format UDZO "$(BUILD_DIR)/$(APP_NAME).dmg"
+	@rm -rf "$(BUILD_DIR)/dmg" "$(DMG)"
+	@mkdir -p "$(BUILD_DIR)/dmg"
+	@cp -R "$(APP)" "$(BUILD_DIR)/dmg/"
+	@ln -s /Applications "$(BUILD_DIR)/dmg/Applications"
+	hdiutil create -volname "$(APP_NAME) $(VERSION)" -srcfolder "$(BUILD_DIR)/dmg" -ov -format UDZO -fs HFS+ "$(DMG)"
+	@rm -rf "$(BUILD_DIR)/dmg"
+	@echo "Built $(DMG)"
 
 clean:
 	rm -rf .build $(BUILD_DIR)
