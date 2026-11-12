@@ -12,3 +12,11 @@ import Testing
     #expect(ActionPipeline.webReady.isApplicable(kinds: [.image], count: 1))
     #expect(!ActionPipeline.submissionReady.isApplicable(kinds: [.pdf], count: 1))
 }
+
+
+@Test func byteDeltaNeverClaimsTotalLossOrFakeZero() {
+    #expect(ByteDelta(before: 24_100_000, after: 77_000).percentString == "-99%")
+    #expect(ByteDelta(before: 1_000_000, after: 999_000).percentString == "-<1%")
+    #expect(ByteDelta(before: 1_000_000, after: 1_002_000).percentString == "+<1%")
+    #expect(ByteDelta(before: 500, after: 500).percentString == "±0%")
+}

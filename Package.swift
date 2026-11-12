@@ -12,9 +12,13 @@ let package = Package(
         .executable(name: "NotchPipe", targets: ["NotchPipe"]),
         .library(name: "NotchPipeCore", targets: ["NotchPipeCore"]),
     ],
+    dependencies: [
+        .package(url: "https://github.com/SDWebImage/libwebp-Xcode", from: "1.3.2"),
+    ],
     targets: [
         .target(
             name: "NotchPipeCore",
+            dependencies: [.product(name: "libwebp", package: "libwebp-Xcode")],
             path: "Sources/NotchPipeCore"
         ),
         .executableTarget(

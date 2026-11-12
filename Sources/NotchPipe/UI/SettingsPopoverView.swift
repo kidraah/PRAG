@@ -106,11 +106,30 @@ private struct SettingToggle: View {
                 .lineLimit(1)
             Spacer(minLength: 8)
             Toggle("", isOn: $isOn)
-                .toggleStyle(.switch)
-                .controlSize(.mini)
+                .toggleStyle(MercurySwitchStyle())
                 .labelsHidden()
-                .tint(Theme.accent)
         }
         .frame(width: 270, height: 20)
+    }
+}
+
+/// Compact switch with an unmistakable on state (the system switch ignores tint in a
+/// non-activating panel and reads as grey-on-grey).
+private struct MercurySwitchStyle: ToggleStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        Button { configuration.isOn.toggle() } label: {
+            ZStack(alignment: configuration.isOn ? .trailing : .leading) {
+                Capsule()
+                    .fill(configuration.isOn ? AnyShapeStyle(Theme.presetGradient) : AnyShapeStyle(Color.white.opacity(0.14)))
+                    .overlay(Capsule().strokeBorder(Color.white.opacity(configuration.isOn ? 0.25 : 0.1), lineWidth: 1))
+                Circle()
+                    .fill(.white)
+                    .shadow(color: .black.opacity(0.35), radius: 1.5, y: 0.5)
+                    .padding(2)
+            }
+            .frame(width: 28, height: 16)
+            .animation(.spring(response: 0.25, dampingFraction: 0.75), value: configuration.isOn)
+        }
+        .buttonStyle(.plain)
     }
 }

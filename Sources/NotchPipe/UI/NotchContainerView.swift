@@ -12,7 +12,8 @@ struct NotchContainerView: View {
     private var glowing: Bool { mode == .peek || (state.isDropTargeted && state.openScreenID == geo.displayID) }
 
     var body: some View {
-        let size = geo.screenShapeSize(for: mode, hasIndicator: model.hasIndicator)
+        let size = geo.screenShapeSize(for: mode, hasIndicator: model.hasIndicator,
+                                       settings: state.page == .settings && state.openScreenID == geo.displayID)
         let ear = geo.earRadius(for: mode, hasIndicator: model.hasIndicator)
         let shape = NotchShape(anchor: geo.anchor, ear: ear, bottom: geo.bottomRadius(for: mode))
 
@@ -25,6 +26,7 @@ struct NotchContainerView: View {
         .frame(width: size.width, height: size.height)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: geo.anchor.alignment)
         .environment(\.colorScheme, .dark)
+        .animation(.shelfExpand, value: state.page)
     }
 
     // MARK: Background: black at the bezel → HUD glass, hairline inner rim, shape-true shadow

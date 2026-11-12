@@ -53,8 +53,13 @@ public struct ByteDelta: Codable, Sendable, Hashable {
 
     /// "-64%" / "+12%" / "±0%"
     public var percentString: String {
-        let pct = Int((ratio * 100).rounded())
-        if pct == 0 { return "±0%" }
+        var pct = Int((ratio * 100).rounded())
+        // Never claim -100% while a file still exists, or ±0% when sizes differ.
+        if pct <= -100 && after > 0 { pct = -99 }
+        if pct == 0 {
+            if after == before { return "±0%" }
+            return after < before ? "-<1%" : "+<1%"
+        }
         return pct > 0 ? "+\(pct)%" : "\(pct)%"
     }
 

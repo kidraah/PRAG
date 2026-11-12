@@ -61,6 +61,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 }
             }
         }
+        if let i = args.firstIndex(of: "--run"), args.indices.contains(i + 1),
+           let preset = ActionPipeline.presets.first(where: { $0.id == args[i + 1] || $0.name == args[i + 1] }) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+                MainActor.assumeIsolated {
+                    guard let self else { return }
+                    let targets = self.state.items.filter { preset.isApplicable(kinds: [$0.kind], count: 1) }
+                    self.state.run(preset, on: targets)
+                }
+            }
+        }
         if let i = args.firstIndex(of: "--snapshot"), args.indices.contains(i + 1) {
             let path = args[i + 1]
             DispatchQueue.main.asyncAfter(deadline: .now() + 2.2) { [weak self] in

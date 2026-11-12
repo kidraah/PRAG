@@ -76,7 +76,8 @@ final class NotchWindowController {
 
     /// True when the point is over the visible shelf body (used for hover/collapse decisions).
     func containsVisibleShelf(_ p: CGPoint) -> Bool {
-        let size = geometry.screenShapeSize(for: model.mode, hasIndicator: model.hasIndicator)
+        let size = geometry.screenShapeSize(for: model.mode, hasIndicator: model.hasIndicator,
+                                            settings: state.page == .settings)
         return geometry.panelFrame(shapeSize: size, padded: false).insetBy(dx: -4, dy: -4).contains(p)
     }
 

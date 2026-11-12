@@ -29,6 +29,8 @@ struct NotchGeometry: Equatable {
     static let expandedTop = CGSize(width: 660, height: 182)      // body below the notch band
     static let expandedEdge = CGSize(width: 340, height: 480)
     static let shadowPad: CGFloat = 28
+    /// Extra depth the top shelf grows by while the settings page is showing.
+    static let settingsExtra: CGFloat = 58
     static let triggerDistance: CGFloat = 60
     static let peekDistance: CGFloat = 170
 
@@ -100,15 +102,16 @@ struct NotchGeometry: Equatable {
     }
 
     /// Full shape size in the anchor's orientation (ears add to the along-edge dimension).
-    func shapeSize(for mode: ShelfMode, hasIndicator: Bool) -> CGSize {
-        let body = bodySize(for: mode, hasIndicator: hasIndicator)
+    func shapeSize(for mode: ShelfMode, hasIndicator: Bool, settings: Bool = false) -> CGSize {
+        var body = bodySize(for: mode, hasIndicator: hasIndicator)
+        if settings && mode == .expanded && anchor == .top { body.height += Self.settingsExtra }
         let ear = earRadius(for: mode, hasIndicator: hasIndicator)
         return CGSize(width: body.width + ear * 2, height: body.height)
     }
 
     /// Shape size in screen orientation (swapped for vertical edges).
-    func screenShapeSize(for mode: ShelfMode, hasIndicator: Bool) -> CGSize {
-        let s = shapeSize(for: mode, hasIndicator: hasIndicator)
+    func screenShapeSize(for mode: ShelfMode, hasIndicator: Bool, settings: Bool = false) -> CGSize {
+        let s = shapeSize(for: mode, hasIndicator: hasIndicator, settings: settings)
         return anchor.isVertical ? CGSize(width: s.height, height: s.width) : s
     }
 
@@ -158,7 +161,7 @@ struct NotchGeometry: Equatable {
 
     /// Open-state window frame: big enough for the expanded shape and its shadow.
     var openFrame: CGRect {
-        panelFrame(shapeSize: screenShapeSize(for: .expanded, hasIndicator: true), padded: true)
+        panelFrame(shapeSize: screenShapeSize(for: .expanded, hasIndicator: true, settings: true), padded: true)
     }
 
     /// The hot target used for drag proximity (the notch / pill / tab body).
