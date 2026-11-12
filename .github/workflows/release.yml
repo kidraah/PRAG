@@ -21,3 +21,5 @@ jobs:
         with:
           files: build/PRAG-*.dmg
           generate_release_notes: true
+          # A DMG already attached by hand (and checksummed in the notes) wins.
+          overwrite_files: false
