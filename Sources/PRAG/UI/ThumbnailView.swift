@@ -18,15 +18,22 @@ final class ThumbnailCache {
         // Generate at a fixed comfortable size so every view shares one cache entry.
         let request = QLThumbnailGenerator.Request(fileAt: url, size: CGSize(width: 128, height: 128),
                                                    scale: scale, representationTypes: .thumbnail)
-        let image: NSImage
-        if let rep = try? await QLThumbnailGenerator.shared.generateBestRepresentation(for: request) {
-            image = rep.nsImage
-        } else {
-            image = NSWorkspace.shared.icon(forFile: url.path)
+        // Completion-handler API + an unchecked box: the async variant returns a non-Sendable
+        // representation, which older Swift 6 compilers refuse to hand across actors.
+        let boxed: ImageBox? = await withCheckedContinuation { continuation in
+            QLThumbnailGenerator.shared.generateBestRepresentation(for: request) { rep, _ in
+                continuation.resume(returning: rep.map { ImageBox(image: $0.nsImage) })
+            }
         }
+        let image = boxed?.image ?? NSWorkspace.shared.icon(forFile: url.path)
         cache.setObject(image, forKey: url as NSURL)
         return image
     }
+}
+
+/// NSImage is immutable once QuickLook hands it over; safe to move to the main actor.
+private struct ImageBox: @unchecked Sendable {
+    let image: NSImage
 }
 
 struct ThumbnailView: View {
