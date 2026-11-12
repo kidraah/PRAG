@@ -79,6 +79,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 }
             }
         }
+        if args.contains("--cycle") {   // dev: open/close repeatedly to inspect the animation
+            for k in 0..<3 {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0 + Double(k) * 1.6) { [weak self] in
+                    MainActor.assumeIsolated { self?.showShelf() }
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.8 + Double(k) * 1.6) { [weak self] in
+                    MainActor.assumeIsolated { self?.state.collapse() }
+                }
+            }
+        }
         if let i = args.firstIndex(of: "--snapshot"), args.indices.contains(i + 1) {
             let path = args[i + 1]
             DispatchQueue.main.asyncAfter(deadline: .now() + 2.2) { [weak self] in
@@ -216,11 +226,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func pointerMoved() {
-        guard state.settings.hoverToOpen, !state.isOpen, !state.isExternalDragActive else {
+        let p = NSEvent.mouseLocation
+        if state.isOpen {
+            cancelHover()
+            // Hover-opened shelves close shortly after the pointer leaves the visible body.
+            guard !state.isExternalDragActive, !state.isPinned, let reason = state.reason,
+                  reason == .hover || reason == .screenshot || reason.isDragDriven else { return }
+            if pointerIsOverOpenShelf() {
+                state.cancelScheduledCollapse()
+            } else if !state.isCollapseScheduled {
+                state.scheduleCollapse(after: 0.22)
+            }
+            return
+        }
+        guard state.settings.hoverToOpen, !state.isExternalDragActive else {
             cancelHover()
             return
         }
-        let p = NSEvent.mouseLocation
         guard let c = controllers.values.first(where: { $0.geometry.triggerRect.insetBy(dx: -1, dy: -1).contains(p) }) else {
             cancelHover()
             return
@@ -228,6 +250,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard hoverScreen != c.displayID else { return }
         hoverScreen = c.displayID
         let id = c.displayID
+        // A short dwell so sweeping past the notch toward the menu bar doesn't pop it open.
         let work = DispatchWorkItem { [weak self] in
             MainActor.assumeIsolated {
                 guard let self, let c = self.controllers[id],
@@ -238,7 +261,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
         hoverWork = work
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.14, execute: work)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05, execute: work)
     }
 
     private func cancelHover() {

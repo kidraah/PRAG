@@ -29,12 +29,16 @@ struct NotchContainerView: View {
         ZStack(alignment: .top) {
             background(shape)
             ZStack(alignment: .top) {
-                if open {
-                    // Fixed open-size frame: the shape masks it, nothing inside re-flows.
-                    ShelfContentView(state: state, geometry: geo, ear: geo.earRadius(for: .expanded, hasIndicator: true))
-                        .frame(width: openSize.width, height: openSize.height, alignment: .top)
-                        .transition(.shelfContent)
-                }
+                // Always mounted (no rebuild on open = instant), laid out once at full size
+                // and masked by the shape, so nothing re-flows while it animates.
+                ShelfContentView(state: state, geometry: geo, ear: geo.earRadius(for: .expanded, hasIndicator: true))
+                    .frame(width: openSize.width, height: openSize.height, alignment: .top)
+                    .opacity(open ? 1 : 0)
+                    .scaleEffect(open ? 1 : 0.985, anchor: .top)
+                    // In quickly behind the growing shape; out faster than it shrinks.
+                    .animation(open ? .easeOut(duration: 0.16) : .easeIn(duration: 0.14), value: open)
+                    .allowsHitTesting(open)
+                    .environment(\.shelfVisible, open)
                 if mode == .peek {
                     PeekView(geometry: geo)
                         .environment(\.colorScheme, .dark)
@@ -88,25 +92,15 @@ struct NotchContainerView: View {
     }
 }
 
-private struct BlurFade: ViewModifier {
-    let amount: Double
-    func body(content: Content) -> some View {
-        content
-            .opacity(1 - amount)
-            .blur(radius: amount * 6)
-            .scaleEffect(1 - amount * 0.03, anchor: .top)
-    }
+private struct ShelfVisibleKey: EnvironmentKey {
+    static let defaultValue = true
 }
 
-extension AnyTransition {
-    /// Content dissolves in slightly after the silhouette starts growing, and out quickly
-    /// before it finishes shrinking — the shape always leads.
-    static var shelfContent: AnyTransition {
-        .asymmetric(
-            insertion: .modifier(active: BlurFade(amount: 1), identity: BlurFade(amount: 0))
-                .animation(.smooth(duration: 0.32).delay(0.05)),
-            removal: .modifier(active: BlurFade(amount: 1), identity: BlurFade(amount: 0))
-                .animation(.easeOut(duration: 0.14)))
+extension EnvironmentValues {
+    /// False while the shelf is collapsed — looping animations pause so idle CPU stays at 0.
+    var shelfVisible: Bool {
+        get { self[ShelfVisibleKey.self] }
+        set { self[ShelfVisibleKey.self] = newValue }
     }
 }
 

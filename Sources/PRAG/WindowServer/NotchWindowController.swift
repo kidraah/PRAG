@@ -15,9 +15,10 @@ final class ScreenShelfModel {
 }
 
 extension Animation {
-    static let shelfExpand = Animation.spring(response: 0.42, dampingFraction: 0.78, blendDuration: 0.1)
-    static let shelfCollapse = Animation.spring(response: 0.36, dampingFraction: 1.0)   // critically damped: no bounce on close
-    static let shelfPeek = Animation.spring(response: 0.3, dampingFraction: 0.62)
+    static let shelfExpand = Animation.spring(response: 0.3, dampingFraction: 0.8)
+    /// Symmetric ease so the eye catches the start of the close and it glides back into the notch.
+    static let shelfCollapse = Animation.timingCurve(0.45, 0, 0.2, 1, duration: 0.38)
+    static let shelfPeek = Animation.spring(response: 0.24, dampingFraction: 0.7)
 }
 
 /// Owns one NotchPanel for one screen and keeps its frame in lock-step with the shelf state.
@@ -37,7 +38,10 @@ final class NotchWindowController {
         self.state = state
         self.model = ScreenShelfModel(geometry: geometry)
         model.hasIndicator = Self.wantsIndicator(state)
-        let frame = geometry.collapsedFrame(hasIndicator: model.hasIndicator)
+        // The window is sized ONCE to fit the open shelf and never resized again: resizing a
+        // large transparent window under the pointer stalls the window server (cursor hitch).
+        // While collapsed it is click-through, so the extra area costs nothing.
+        let frame = geometry.openFrame
         panel = NotchPanel(contentRect: frame)
         hostView = NotchHostView(frame: CGRect(origin: .zero, size: frame.size))
 
@@ -55,10 +59,21 @@ final class NotchWindowController {
             return model.mode == .expanded && state.openScreenID == model.geometry.displayID
         }
         panel.keyHandler = { [weak self] event in self?.handleKey(event) ?? false }
+        // Clicks on the transparent margin around an open shelf close it (like a popover).
+        panel.clickFilter = { [weak self] screenPoint in
+            guard let self else { return true }
+            if self.model.mode == .expanded && !self.containsVisibleShelf(screenPoint) {
+                if !self.state.isPinned { self.state.collapse() }
+                return false
+            }
+            return true
+        }
 
         panel.setFrame(frame, display: false)
+        panel.ignoresMouseEvents = true
         panel.orderFrontRegardless()
         observe()
+        apply(animated: false)
     }
 
     func tearDown() {
@@ -71,6 +86,7 @@ final class NotchWindowController {
         guard geometry != model.geometry else { return }
         model.geometry = geometry
         hostView.displayID = geometry.displayID
+        panel.setFrame(geometry.openFrame, display: false)
         apply(animated: false)
     }
 
@@ -87,6 +103,8 @@ final class NotchWindowController {
         state.settings.showIndicator && (!state.items.isEmpty || !state.jobs.isEmpty)
     }
 
+    /// Re-arms after every change. Only the change handler applies state (animated) — applying
+    /// again on re-registration would cut a running animation short.
     private func observe() {
         guard observing else { return }
         withObservationTracking {
@@ -102,62 +120,28 @@ final class NotchWindowController {
                 self.observe()
             }
         }
-        apply(animated: false)
     }
 
     private func apply(animated: Bool) {
         let target = state.mode(for: displayID)
         let indicator = Self.wantsIndicator(state)
-        let geo = model.geometry
 
         // Collapsed = fully click-through: the notch/pill never intercepts a menu-bar click.
         // Hover and drags are detected by global monitors in AppDelegate instead.
-        panel.ignoresMouseEvents = (target == .collapsed)
+        let ignore = target == .collapsed
+        if panel.ignoresMouseEvents != ignore { panel.ignoresMouseEvents = ignore }
 
-        if target != .collapsed {
-            // Grow the window first (instantly, invisible), then animate the shape inside it.
-            if panel.frame != geo.openFrame { panel.setFrame(geo.openFrame, display: true) }
-            generation += 1
-            let anim: Animation = target == .expanded ? .shelfExpand : .shelfPeek
-            if model.mode != target || model.hasIndicator != indicator {
-                withAnimation(animated ? anim : nil) {
-                    model.mode = target
-                    model.hasIndicator = indicator
-                }
-            }
-            return
+        guard model.mode != target || model.hasIndicator != indicator else { return }
+        let animation: Animation = switch target {
+        case .expanded: .shelfExpand
+        case .peek: .shelfPeek
+        case .collapsed: .shelfCollapse
         }
-
-        // Collapsing (or staying collapsed).
-        if panel.isKeyWindow { relinquishKeyFocus() }
-        let collapsedFrame = geo.collapsedFrame(hasIndicator: indicator)
-        let needsAnimation = model.mode != .collapsed || model.hasIndicator != indicator
-        guard needsAnimation else {
-            if panel.frame != collapsedFrame { panel.setFrame(collapsedFrame, display: true) }
-            return
-        }
-        // Growing wings while collapsed: make room first.
-        if model.mode == .collapsed && indicator && !model.hasIndicator {
-            panel.setFrame(collapsedFrame, display: true)
-        }
-        generation += 1
-        let gen = generation
-        let finish = { [weak self] in
-            guard let self, gen == self.generation, self.state.mode(for: self.displayID) == .collapsed else { return }
-            self.panel.setFrame(self.model.geometry.collapsedFrame(hasIndicator: self.model.hasIndicator), display: true)
-        }
-        if animated {
-            withAnimation(.shelfCollapse, completionCriteria: .removed) {
-                model.mode = .collapsed
-                model.hasIndicator = indicator
-            } completion: {
-                finish()
-            }
-        } else {
-            model.mode = .collapsed
+        withAnimation(animated ? animation : nil) {
+            model.mode = target
             model.hasIndicator = indicator
-            finish()
         }
+        if target == .collapsed && panel.isKeyWindow { relinquishKeyFocus() }
     }
 
     /// Hand keyboard focus back to whatever app the user was in — we never activated,
@@ -268,7 +252,7 @@ final class NotchHostView: NSView {
             }
         }
         hoverWork = work
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.14, execute: work)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05, execute: work)
     }
 
     override func mouseExited(with event: NSEvent) {

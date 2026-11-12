@@ -364,12 +364,11 @@ struct DeltaBadge: View {
 private struct EmptyDropView: View {
     let title: String
     let isTargeted: Bool
-    @State private var bob = false
-
     var body: some View {
+        // Static on purpose: no looping animation, so an open, empty shelf costs no CPU.
         RoundedRectangle(cornerRadius: 16, style: .continuous)
             .strokeBorder(isTargeted ? Theme.accent : Theme.hairline.opacity(1.6),
-                          style: StrokeStyle(lineWidth: 1.2, dash: [5, 5], dashPhase: bob ? 10 : 0))
+                          style: StrokeStyle(lineWidth: 1.2, dash: [5, 5]))
             .background(RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .fill(isTargeted ? Theme.accent.opacity(0.10) : Theme.fill.opacity(0.5)))
             .overlay {
@@ -377,7 +376,8 @@ private struct EmptyDropView: View {
                     Image(systemName: isTargeted ? "tray.and.arrow.down.fill" : "tray.and.arrow.down")
                         .font(.system(size: 22, weight: .light))
                         .foregroundStyle(isTargeted ? Theme.accent : Theme.secondary)
-                        .offset(y: bob ? 2 : -2)
+                        .offset(y: isTargeted ? 2 : 0)
+                        .contentTransition(.symbolEffect(.replace))
                     Text(isTargeted ? "Release to park" : title)
                         .font(Theme.label(12, .semibold))
                         .foregroundStyle(Theme.text)
@@ -387,10 +387,7 @@ private struct EmptyDropView: View {
                     }
                 }
             }
-            .onAppear {
-                withAnimation(.easeInOut(duration: 1.4).repeatForever(autoreverses: true)) { bob = true }
-            }
-            .animation(.easeOut(duration: 0.18), value: isTargeted)
+            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isTargeted)
     }
 
     private func hint(_ key: String, _ text: String) -> some View {

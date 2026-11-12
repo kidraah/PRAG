@@ -209,7 +209,9 @@ final class AppState {
         collapseWork?.cancel()
         let work = DispatchWorkItem { [weak self] in
             MainActor.assumeIsolated {
-                guard let self, !self.isPinned, !self.isDropTargeted else { return }
+                guard let self else { return }
+                self.collapseWork = nil
+                guard !self.isPinned, !self.isDropTargeted else { return }
                 if self.pointerProbe?() ?? self.isPointerInside { return }
                 self.collapse()
             }
@@ -217,6 +219,8 @@ final class AppState {
         collapseWork = work
         DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: work)
     }
+
+    var isCollapseScheduled: Bool { collapseWork != nil }
 
     func cancelScheduledCollapse() {
         collapseWork?.cancel()

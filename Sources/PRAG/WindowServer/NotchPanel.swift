@@ -8,6 +8,8 @@ final class NotchPanel: NSPanel {
     /// Keyboard + QuickLook handling is forwarded here.
     var keyHandler: ((NSEvent) -> Bool)?
     var canBecomeKeyProvider: (() -> Bool)?
+    /// Return false to swallow a mouse-down (screen coordinates), e.g. on the transparent margin.
+    var clickFilter: ((CGPoint) -> Bool)?
     weak var quickLook: QuickLookCoordinator?
 
     init(contentRect: CGRect) {
@@ -37,8 +39,10 @@ final class NotchPanel: NSPanel {
     override func sendEvent(_ event: NSEvent) {
         // Become key on the mouse-down itself so this click and the next keystroke both land
         // immediately. Non-activating: the app you were in stays frontmost.
-        if (event.type == .leftMouseDown || event.type == .rightMouseDown), !isKeyWindow, canBecomeKey {
-            makeKey()
+        if event.type == .leftMouseDown || event.type == .rightMouseDown {
+            let screenPoint = convertPoint(toScreen: event.locationInWindow)
+            if clickFilter?(screenPoint) == false { return }
+            if !isKeyWindow, canBecomeKey { makeKey() }
         }
         super.sendEvent(event)
     }
