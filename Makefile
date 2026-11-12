@@ -2,14 +2,16 @@ APP_NAME   := NotchPipe
 BUILD_DIR  := build
 APP        := $(BUILD_DIR)/$(APP_NAME).app
 CONFIG     ?= release
-SWIFT_BIN   = $(shell swift build -c $(CONFIG) --arch arm64 --show-bin-path)
+SCRATCH    ?= .build
+SWIFT_FLAGS = -c $(CONFIG) --arch arm64 --scratch-path $(SCRATCH)
+SWIFT_BIN   = $(shell swift build $(SWIFT_FLAGS) --show-bin-path)
 
 .PHONY: all build app run test dmg clean kill
 
 all: app
 
 build:
-	swift build -c $(CONFIG) --arch arm64
+	swift build $(SWIFT_FLAGS)
 
 app: build
 	@rm -rf "$(APP)"
@@ -26,8 +28,12 @@ kill:
 run: app kill
 	@open "$(APP)"
 
+# Command Line Tools ship Swift Testing outside the default search paths; point at it.
+CLT_FW     := /Library/Developer/CommandLineTools/Library/Developer/Frameworks
+TEST_FLAGS := $(if $(wildcard $(CLT_FW)/Testing.framework),-Xswiftc -F -Xswiftc $(CLT_FW) -Xlinker -F -Xlinker $(CLT_FW) -Xlinker -rpath -Xlinker $(CLT_FW) -Xlinker -rpath -Xlinker /Library/Developer/CommandLineTools/Library/Developer/usr/lib,)
+
 test:
-	swift test
+	swift test --scratch-path $(SCRATCH) $(TEST_FLAGS)
 
 dmg: app
 	@rm -f "$(BUILD_DIR)/$(APP_NAME).dmg"
